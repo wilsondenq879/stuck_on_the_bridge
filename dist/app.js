@@ -1,12 +1,12 @@
-import {safeRoadStart} from './quick-start.js?v=0.9.2';
+import {safeRoadStart} from './quick-start.js?v=0.9.3';
 import {drawText,installGameText} from './game-text.js?v=0.8.2-puns';
 import {Route,clamp,lerp} from './geo.js?v=0.8.0';
-import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.2';
-import {DrivingWorld} from './world.js?v=0.9.2';
+import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.3';
+import {DrivingWorld} from './world.js?v=0.9.3';
 import {rollDay,dayLabels,LocalChallenge} from './day.js?v=0.8.0';
 import {readGamepad,mergeControls} from './controls.js';
 import {WEATHER,earthquakeAt} from './environment.js';
-import {CommuteAudio} from './audio.js?v=0.9.2';
+import {CommuteAudio} from './audio.js?v=0.9.3';
 import {TouchDriveInput,bindTouchControls} from './touch-controls.js';
 
 installGameText(document.body);
@@ -15,6 +15,7 @@ const $=id=>document.getElementById(id),keys=new Set(),touch=new TouchDriveInput
 const compactMedia=matchMedia('(any-pointer:coarse), (max-width:900px), (max-height:500px)');
 let mobileControls;
 let guanxinData=null;
+const mobilePerformance=matchMedia('(any-pointer: coarse), (max-width: 700px)').matches;
 let route,world,sim,data,day,terrainData,overpassData,lastFeedbackId=0,routeIndex=null,routeId='zhubei-tsmc',routeLoadToken=0,challenge=null,vehicle='car',scenario='normal';
 let running=false,paused=false,ready=false,chase=false,timeScale=1,mapNear=false,last=0,hudTick=0,toastUntil=0,notice='';
 let subtitleUntil=0, latestToast='';
@@ -70,7 +71,7 @@ $('start').addEventListener('click',async()=>{
   if(choice==='guanxinPark'){const path=vehicle==='bike'?sim?.bikeRoute:route,area=data.landscapeAreas?.find(a=>a.osmId===134204596);if(area){const center=area.points.reduce((p,q)=>({x:p.x+q.x/area.points.length,z:p.z+q.z/area.points.length}),{x:0,z:0});startS=Math.max(0,path.nearest(center.x,center.z).s-18);}}
   if(choice==='restaurant'){const shop=data.restaurants?.[0];if(shop)startS=safeRoadStart(Math.max(0,(vehicle==='bike'?shop.bikeS:shop.s)-65),vehicle==='bike'?data.bikeIntersections:data.intersections,VEHICLES[vehicle].length);}
   const quick=data.quickStarts?.find(q=>q.value===choice);if(quick)startS=vehicle==='bike'?(quick.bikeS??quick.s):quick.s;
-  sim=new TrafficSimulation(route,{vehicle,scenario,startS,day,seed:day.seed});sim.startS=startS;
+  sim=new TrafficSimulation(route,{vehicle,scenario,startS,day,seed:day.seed,warmupSteps:mobilePerformance?360:2400});sim.startS=startS;
   challenge=choice==='0'&&day.chapter?new LocalChallenge(day,vehicle):null;
   if(day.chapter&&!challenge)day.log.push('快速起點：本次略過地方序章。');
   world.makeCockpit(vehicle);world.configureDay(sim);if(challenge)world.makeChallenge(challenge);
@@ -197,8 +198,9 @@ function finish(){
  $('results').replaceChildren(...items.map(([label,value])=>{const div=document.createElement('div'),small=document.createElement('small'),strong=document.createElement('strong');small.textContent=label;strong.textContent=value;div.append(small,strong);return div;}));
  $('resultEvents').textContent=dayLabels(day).join(' · ')+(sim.startS>0&&day.chapter?'（快速起點：略過序章）':'')+(day.violations.length?'／'+day.violations.map(v=>v.label).join('、'):'');$('returnTrip').hidden=vehicle==='bus'||!(data.sceneryProfile==='south-hsinchu'&&data.direction==='outbound');$('resultDialog').showModal();
 }
+let lastMobileFrame=0;
 function frame(t){
- requestAnimationFrame(frame);if(!world||!sim)return;let dt=Math.min((t-last)/1000||0,.08);last=t;if(document.hidden)return;pollPad();
+ requestAnimationFrame(frame);if(!world||!sim)return;if(mobilePerformance&&t-lastMobileFrame<33)return;lastMobileFrame=t;let dt=Math.min((t-last)/1000||0,.08);last=t;if(document.hidden)return;pollPad();
  if(running&&!paused){const input=controls();let remaining=dt*timeScale;while(remaining>0){const step=Math.min(remaining,1/40);if(challenge){challenge.step(step,input);if(challenge.done){const follow=challenge.player.auto;challenge=null;sim.player.auto=follow;message('序章完成，從'+data.originLabel+'前往'+data.destinationLabel+'。');}}else sim.step(step,input);remaining-=step;}if(sim.player.done)finish();}
  else if(!running)sim.stepTraffic(Math.min(dt,.04),false);
  if(!dragging){lookX=lerp(lookX,padState.lookX?-padState.lookX:keys.has('KeyQ')?.8:keys.has('KeyE')?-.8:0,Math.min(1,dt*4));lookY=lerp(lookY,-(padState.lookY||0)*.3,Math.min(1,dt*3));}
@@ -209,13 +211,13 @@ function showError(e){console.error(e);$('errorText').textContent=`無法載入 
 async function loadRoute(id){
  const token=++routeLoadToken;ready=false;$('start').disabled=true;$('start').firstElementChild.textContent='正在建構實際路線…';
  const entry=routeIndex.routes.find(r=>r.id===id);if(!entry)throw new Error('找不到路線');
- const response=await fetch('data/routes/'+entry.file+'?v=0.9.2');if(!response.ok)throw new Error('路線資料讀取失敗');const next=await response.json();if(token!==routeLoadToken)return;
+ const response=await fetch('data/routes/'+entry.file+'?v=0.9.3');if(!response.ok)throw new Error('路線資料讀取失敗');const next=await response.json();if(token!==routeLoadToken)return;
  if(next.sceneryProfile==='south-hsinchu'){
   guanxinData??=await fetch('data/guanxin.json?v=0.8.1').then(r=>{if(!r.ok)throw new Error('關新街廓讀取失敗');return r.json();});
   next.guanxinBuildings=guanxinData.buildings;
  }
  if(token!==routeLoadToken)return;
- world?.dispose();data=next;routeId=id;route=new Route(data);sim=new TrafficSimulation(route,{vehicle,startS:entry.originKey==='zhubei'?760:280});world=new DrivingWorld($('scene'),route,sim.signals,terrainData,data.sceneryProfile==='south-hsinchu'?null:overpassData);world.makeCockpit(vehicle);
+ world?.dispose();data=next;routeId=id;route=new Route(data);sim=new TrafficSimulation(route,{vehicle,startS:entry.originKey==='zhubei'?760:280,warmupSteps:mobilePerformance?360:2400});world=new DrivingWorld($('scene'),route,sim.signals,terrainData,data.sceneryProfile==='south-hsinchu'?null:overpassData);world.makeCockpit(vehicle);
  $('originChoice').value=entry.originKey;$('destinationChoice').value=entry.destinationKey;
  $('directionRow').hidden=vehicle==='bus'||entry.originKey!=='guanxin';$('destinationChoice').closest('label').hidden=vehicle==='bus';$('tripDirection').value=entry.direction??'outbound';
  $('routeVehicleNote').hidden=entry.originKey!=='guanxin';$('routeVehicleNote').textContent=vehicleRouteNote();
