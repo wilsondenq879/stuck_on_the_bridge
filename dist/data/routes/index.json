@@ -13,8 +13,8 @@
       "destinationLabel": "台積電12廠（12A／總部）",
       "originKey": "zhubei",
       "destinationKey": "tsmc",
-      "lengthMeters": 6123.556,
-      "bikeLengthMeters": 6147.62,
+      "lengthMeters": 6494.524,
+      "bikeLengthMeters": 6518.588,
       "destination": {
         "name": "台積電12廠（12A／總部）",
         "address": "新竹科學園區力行六路8號",
@@ -31,11 +31,11 @@
       },
       "departure": {
         "name": "竹北・自強南路",
-        "lat": 24.8170552,
-        "lon": 121.0258456,
-        "osmNodeId": 1404603352,
-        "sourceUrl": "https://www.openstreetmap.org/node/1404603352",
-        "note": "既有經國大橋／慈雲路通勤路線的公共道路起點。"
+        "lat": 24.8197161,
+        "lon": 121.028061,
+        "osmNodeId": 1447395864,
+        "sourceUrl": "https://www.openstreetmap.org/node/1447395864",
+        "note": "由光明六路口南側沿實際自強南路南向車道，經自強南店對側再接原通勤線。"
       }
     },
     {
@@ -45,8 +45,8 @@
       "destinationLabel": "聯發科總部",
       "originKey": "zhubei",
       "destinationKey": "mediatek",
-      "lengthMeters": 6860.039,
-      "bikeLengthMeters": 6884.102,
+      "lengthMeters": 7231.007,
+      "bikeLengthMeters": 7255.07,
       "destination": {
         "name": "聯發科總部",
         "address": "新竹科學園區篤行一路1號",
@@ -63,11 +63,11 @@
       },
       "departure": {
         "name": "竹北・自強南路",
-        "lat": 24.8170552,
-        "lon": 121.0258456,
-        "osmNodeId": 1404603352,
-        "sourceUrl": "https://www.openstreetmap.org/node/1404603352",
-        "note": "既有經國大橋／慈雲路通勤路線的公共道路起點。"
+        "lat": 24.8197161,
+        "lon": 121.028061,
+        "osmNodeId": 1447395864,
+        "sourceUrl": "https://www.openstreetmap.org/node/1447395864",
+        "note": "由光明六路口南側沿實際自強南路南向車道，經自強南店對側再接原通勤線。"
       }
     },
     {

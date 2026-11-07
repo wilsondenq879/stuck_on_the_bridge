@@ -1,6 +1,8 @@
-import {makeBusParts} from './bus-world.js?v=0.9.0';
+import {makeRestaurants} from './restaurant-world.js?v=0.9.1';
+import {restaurantActors,alignInterchange} from './restaurant-queues.js?v=0.9.1';
+import {makeBusParts} from './bus-world.js?v=0.9.1';
 import {drawText} from './game-text.js?v=0.8.2-puns';
-import {onGuanxin} from './guanxin-world.js?v=0.8.2-puns';
+import {onGuanxin} from './guanxin-world.js?v=0.9.1';
 import * as THREE from './vendor/three.module.js';
 import {Route,clamp,lerp,seeded,steeredYaw} from './geo.js?v=0.8.0';
 import {buildInterchange,interchangeRoads} from './interchange.js';
@@ -8,7 +10,7 @@ import {alignmentAt,appendRibbon,bikeBranches,ribbonRuns,roadFrames,routeFrames,
 import {WEATHER,earthquakeAt,geographicPoint,intrudesRoad,rectangleFootprint} from './environment.js';
 import {EnvironmentWorld} from './environment-world.js?v=0.8.2-puns';
 import {isErchong,streetDistrict,mappedBuildingStyle} from './neighborhood.js';
-import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.0';
+import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.1';
 import {makeErchongStreets,makeCommunityExit} from './neighborhood-world.js?v=0.8.2-puns';
 
 const COLORS=[0xd7d9d7,0x384f56,0x8b969b,0x202d35,0xb3aa91,0x7c4c43,0xe0e3dc];
@@ -51,7 +53,7 @@ export class DrivingWorld {
  this.branches=bikeBranches(route,this.bikeRoute);
  this.interchange=overpasses;
  this.prepareRoadClearance();
- this.makeTerrain();this.makeRoad();this.makeBuildings();makeErchongStreets(this);makeSouthHsinchu(this);this.makeRetail();this.makeFurniture();this.makeSignals(signals);this.carBatch=new TrafficBatch(this.scene,'car',160);this.bikeBatch=new TrafficBatch(this.scene,'bike',90);this.busBatch=new TrafficBatch(this.scene,'bus',45);this.playerCars=new TrafficBatch(this.scene,'car',1);this.playerBikes=new TrafficBatch(this.scene,'bike',1);this.playerBuses=new TrafficBatch(this.scene,'bus',1);this.makeCockpit('car');this.challengeOrigin=new THREE.Vector3(-90000,0,-90000);this.environment=new EnvironmentWorld(this,terrain);if(overpasses)this.makeOverpasses(overpasses);
+ this.makeTerrain();this.makeRoad();this.makeBuildings();makeErchongStreets(this);makeSouthHsinchu(this);this.makeRetail();makeRestaurants(this);this.makeFurniture();this.makeSignals(signals);this.carBatch=new TrafficBatch(this.scene,'car',160);this.bikeBatch=new TrafficBatch(this.scene,'bike',90);this.busBatch=new TrafficBatch(this.scene,'bus',45);this.playerCars=new TrafficBatch(this.scene,'car',1);this.playerBikes=new TrafficBatch(this.scene,'bike',1);this.playerBuses=new TrafficBatch(this.scene,'bus',1);this.makeCockpit('car');this.challengeOrigin=new THREE.Vector3(-90000,0,-90000);this.environment=new EnvironmentWorld(this,terrain);if(overpasses)this.makeOverpasses(overpasses);
  this.rearTarget=new THREE.WebGLRenderTarget(320,100);this.rearCamera=new THREE.PerspectiveCamera(60,3.2,.1,800);this.mirrorMat.map=this.rearTarget.texture;
  this.resize();this.resizeHandler=()=>this.resize();window.addEventListener('resize',this.resizeHandler);if(typeof ResizeObserver!=='undefined'){this.sizeObserver=new ResizeObserver(this.resizeHandler);this.sizeObserver.observe(container);}
  }
@@ -67,6 +69,8 @@ export class DrivingWorld {
    const path=this.route,width=this.opposingWidth(s);
    const base=path.sample(s,-path.width(s)/2-this.medianWidth(s)-width/2);
    base.width=width;
+   const local=this.restaurantOpposing;const exactLocal=local?.length?alignmentAt(local,s):null;
+   if(exactLocal)return {...base,...exactLocal};
    const points=this.northbound;
    if(!points?.length)return base;
    const exact=alignmentAt(points,s);
@@ -81,14 +85,22 @@ export class DrivingWorld {
    return base;
  }
  prepareRoadClearance(){
+   this.interchange=alignInterchange(this.interchange,this.route.data.routePrefixMeters||0);
    this.northbound=isErchong(this.route)?null:this.interchange?.northboundAlignment?.points;
    const viaduct=this.interchange?.parkViaduct;
    this.crossingViaduct=isErchong(this.route)&&viaduct ? new Route(viaduct) : null;
+   const local=[];
+   if(this.route.data.direction!=='return')for(const shop of this.route.data.restaurants||[])for(const p of shop.northboundRoad){
+     const n=this.route.nearest(p.x,p.z);if(n.d<35&&n.s>.1&&n.s<this.route.length-.1)local.push({x:p.x,z:p.z,y:0,southboundS:n.s,lanes:shop.id==='ziqiang'?3:2,width:(shop.id==='ziqiang'?3:2)*3.35});
+   }
+   this.restaurantOpposing=local.sort((a,b)=>a.southboundS-b.southboundS);
    this.carFrames=routeFrames(this.route);
    const stations=new Set(this.carFrames.map(p=>p.s));
    for(const p of this.northbound??[]) if(p.southboundS>=0 && p.southboundS<=this.route.length)stations.add(p.southboundS);
+   for(const p of this.restaurantOpposing)stations.add(p.southboundS);
    this.opposingFrames=[...stations].sort((a,b)=>a-b).map(s=>this.opposingAt(s));
    this.clearance=new RoadClearance();
+   for(const shop of this.route.data.restaurants||[])this.clearance.add(roadFrames(shop.queuePath.map(p=>({...p,y:0}))),-1.65,1.65,'restaurant:'+shop.id);
    const half=p=>this.route.width(p.s)/2;
    this.clearance.add(this.carFrames,p=>-half(p),half,'car');
    this.clearance.add(this.opposingFrames,p=>-p.width/2,p=>p.width/2,'opposing');
@@ -202,7 +214,7 @@ export class DrivingWorld {
  instances(geo,mat,items){if(!items.length)return;const im=new THREE.InstancedMesh(geo,mat,items.length),o=new THREE.Object3D();for(let i=0;i<items.length;i++){const v=items[i];o.position.set(...v.p);o.scale.set(...(v.scale||[1,1,1]));o.rotation.set(0,v.yaw||0,0);o.updateMatrix();im.setMatrixAt(i,o.matrix);if(v.color)im.setColorAt(i,new THREE.Color(v.color));}im.castShadow=true;im.receiveShadow=true;this.scene.add(im);return im;}
  makeBuildings(){if(this.route.data.sceneryProfile==='south-hsinchu')return;const win=texture(256,512,(c,w,h)=>{c.fillStyle='#c2c6bd';c.fillRect(0,0,w,h);for(let y=12;y<h;y+=48)for(let x=10;x<w;x+=42){c.fillStyle=this.rng()>.5?'#758e93':'#536c75';c.fillRect(x,y,25,31);c.fillStyle='#d3d5c8';c.fillRect(x+12,y,2,31);c.fillStyle='#e2dfc9';c.fillRect(x,y+33,27,3);}});win.wrapS=win.wrapT=THREE.RepeatWrapping;win.anisotropy=4;
  const facade=new THREE.MeshStandardMaterial({map:win,color:0xe3e1d3,roughness:.8});const roof=new THREE.MeshStandardMaterial({color:0x949f98,roughness:1});
- this.clearanceRemoved=0;const palette=[0xd7c5a7,0xb4c4cb,0xcbbaa9,0x839f98,0xa98974,0xe2dfd2,0xb8ac9b,0x8fa1b2];for(const b of this.route.data.buildings||[]){if(!b.points?.length)continue;if(intrudesRoad(b.points,[this.route,this.bikeRoute],3)){this.clearanceRemoved++;continue;}const shape=new THREE.Shape();b.points.forEach((p,i)=>i?shape.lineTo(p.x,-p.z):shape.moveTo(p.x,-p.z));const spec=mappedBuildingStyle(this.route,b);if(spec.hidden)continue;const h=spec.height;const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,steps:1});g.rotateX(-Math.PI/2);const uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)/12,uv.getY(i)/32);uv.needsUpdate=true;const skin=facade.clone();skin.color.setHex(palette[b.osmWayId%palette.length]);const top=roof.clone();top.color.setHex(palette[(b.osmWayId+3)%palette.length]);const m=mesh(g,[top,skin]);m.castShadow=true;m.receiveShadow=true;this.scene.add(m);}
+ this.clearanceRemoved=0;const palette=[0xd7c5a7,0xb4c4cb,0xcbbaa9,0x839f98,0xa98974,0xe2dfd2,0xb8ac9b,0x8fa1b2];for(const b of this.route.data.buildings||[]){if((this.route.data.restaurants||[]).some(s=>s.osmWayId===b.osmWayId)||!b.points?.length)continue;if(intrudesRoad(b.points,[this.route,this.bikeRoute],3)){this.clearanceRemoved++;continue;}const shape=new THREE.Shape();b.points.forEach((p,i)=>i?shape.lineTo(p.x,-p.z):shape.moveTo(p.x,-p.z));const spec=mappedBuildingStyle(this.route,b);if(spec.hidden)continue;const h=spec.height;const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,steps:1});g.rotateX(-Math.PI/2);const uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)/12,uv.getY(i)/32);uv.needsUpdate=true;const skin=facade.clone();skin.color.setHex(palette[b.osmWayId%palette.length]);const top=roof.clone();top.color.setHex(palette[(b.osmWayId+3)%palette.length]);const m=mesh(g,[top,skin]);m.castShadow=true;m.receiveShadow=true;this.scene.add(m);}
  // Procedural facade massing only fills un-mapped distant blocks.
  const blocks=[];for(let s=0;s<this.route.length;s+=60){const p=this.route.sample(s);if(p.bridge||streetDistrict(this.route,s)!=='other')continue;for(const side of[-1,1]){let o=side*(42+this.rng()*34),q=this.route.sample(s,o);let nearby=(this.route.data.buildings||[]).some(b=>b.points?.some(v=>Math.hypot(v.x-q.x,v.z-q.z)<24));if(nearby)continue;let h=s<700?25+this.rng()*50:10+this.rng()*25;const bw=15+this.rng()*15,bd=15+this.rng()*16;if(intrudesRoad(rectangleFootprint(q.x,q.z,bw,bd,q.yaw),[this.route,this.bikeRoute],5))continue;blocks.push({p:[q.x,h/2,q.z],scale:[bw,h,bd],yaw:q.yaw,color:palette[Math.floor(this.rng()*palette.length)]});}}
  this.instances(new THREE.BoxGeometry(1,1,1),facade,blocks);
@@ -340,12 +352,13 @@ export class DrivingWorld {
  const visible=challenge?[]:sim.cars.filter(c=>Math.abs(c.s-player.s)<570 && !(chase&&c.s<player.s&&c.s>player.s-15));
  visible.sort((a,b)=>Math.abs(a.s-player.s)-Math.abs(b.s-player.s));
  const opposing=[];
+ const restaurantCars=challenge?[]:restaurantActors(sim).filter(c=>Math.hypot(c.world.x-p.x,c.world.z-p.z)<570);
  for(let i=0;i<45;i++){
    const s=(i*109-sim.time*10+this.route.length*100)%this.route.length;
-   if(!challenge&&Math.abs(s-player.s)<450)opposing.push({s,world:this.opposingAt(s),color:i%7,reverse:true,braking:false,kind:'car'});
+   if(!challenge&&Math.abs(s-player.s)<450&&!restaurantCars.some(c=>{const a=this.opposingAt(s);return Math.hypot(a.x-c.world.x,a.z-c.world.z)<8;}))opposing.push({s,world:this.opposingAt(s),color:i%7,reverse:true,braking:false,kind:'car'});
  }
  const continuing=challenge?[]:(sim.mainlineDepartures||[]).filter(c=>Math.abs(c.s-player.s)<700).map(c=>{const p=c.mainlinePath?.sample(c.mainlineS+c.speed*c.age,c.mainlineOffset);return {...c,world:{x:p?.x??c.origin.x+c.tx*c.speed*c.age,z:p?.z??c.origin.z+c.tz*c.speed*c.age,y:c.origin.y,yaw:p?.yaw??c.yaw}};});
- const crossing=[];for(const light of sim.signals){if(challenge||Math.abs(light.s-player.s)>450||light.fictional)continue;const ph=sim.phase(light);if(!['red','blocked'].includes(ph.state))continue;const at=sim.pathFor(sim.player.vehicle).sample(light.s);for(let i=0;i<5;i++){const along=((sim.time*(ph.blocked?.6:5)+i*9)%75)-37.5;crossing.push({s:light.s,offset:0,color:i+1,braking:ph.blocked,world:{x:at.x+at.rx*along,y:at.y+.02,z:at.z+at.rz*along,yaw:at.yaw+Math.PI/2}});}}this.carBatch.update([...visible.filter(c=>c.kind==='car'),...continuing.filter(c=>c.kind==='car'),...opposing,...crossing],this.route);this.bikeBatch.update(visible.filter(c=>c.kind==='bike'),this.bikeRoute);this.busBatch.update([...visible.filter(c=>c.kind==='bus'),...continuing.filter(c=>c.kind==='bus')],this.route);
+ const crossing=[];for(const light of sim.signals){if(challenge||Math.abs(light.s-player.s)>450||light.fictional)continue;const ph=sim.phase(light);if(!['red','blocked'].includes(ph.state))continue;const at=sim.pathFor(sim.player.vehicle).sample(light.s);for(let i=0;i<5;i++){const along=((sim.time*(ph.blocked?.6:5)+i*9)%75)-37.5;crossing.push({s:light.s,offset:0,color:i+1,braking:ph.blocked,world:{x:at.x+at.rx*along,y:at.y+.02,z:at.z+at.rz*along,yaw:at.yaw+Math.PI/2}});}}this.carBatch.update([...restaurantCars,...visible.filter(c=>c.kind==='car'),...continuing.filter(c=>c.kind==='car'),...opposing,...crossing],this.route);this.bikeBatch.update(visible.filter(c=>c.kind==='bike'),this.bikeRoute);this.busBatch.update([...visible.filter(c=>c.kind==='bus'),...continuing.filter(c=>c.kind==='bus')],this.route);
  for(const m of this.signalModels){const state=sim.phase(m.signal).state;for(let i=0;i<3;i++){const active=(['green','blocked'].includes(state)&&i===2)||(state==='yellow'&&i===1)||(state==='red'&&i===0);const color=[0xf45843,0xffbf52,0x8ce4ad][i];m.bulbs[i].color.setHex(active?color:0x263831);m.bulbs[i].emissive.setHex(active?color:0);m.bulbs[i].emissiveIntensity=active?1.7:0;}}
  if(!chase&&!challenge&&(sim.totalTime-this.lastMirror>.14||menu)){const mirrorRoute=this.kind==='bike'?this.bikeRoute:this.route;const back=mirrorRoute.sample(Math.max(0,player.s-4),player.offset);this.rearCamera.position.set(back.x,back.y+(this.kind==='bus'?2.7:1.65),back.z);const target=mirrorRoute.sample(Math.max(0,player.s-80),player.offset);this.rearCamera.lookAt(target.x,target.y+1.5,target.z);this.cockpit.visible=false;this.renderer.setRenderTarget(this.rearTarget);this.renderer.render(this.scene,this.rearCamera);this.renderer.setRenderTarget(null);this.cockpit.visible=!chase;this.lastMirror=sim.totalTime;}
  this.environment?.update(sim,p,dt,challenge);this.renderer.render(this.scene,this.camera);

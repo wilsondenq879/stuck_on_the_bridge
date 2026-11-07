@@ -1,3 +1,4 @@
+import {RestaurantQueue,restaurantActors} from './restaurant-queues.js?v=0.9.1';
 import {Route,clamp,lerp,seeded} from './geo.js?v=0.8.0';
 import {recordViolation} from './day.js';
 import {WEATHER,earthquakeAt,windAt} from './environment.js';
@@ -49,6 +50,12 @@ export class TrafficSimulation {
     if(day?.bridgeSignal)other.push({...this.signals.find(x=>x.fictional)});
     if(vehicle!=='bike')this.bikeSignals=other;else this.carSignals=other;
     for(const light of other){const match=this.signals.find(p=>p.osmId&&p.osmId===light.osmId);if(match){light.offset=match.offset;light.cycle=match.cycle;light.green=match.green;}}
+    this.restaurantQueues=(route.data.restaurants||[]).map(shop=>new RestaurantQueue(shop,route,day?.seed??seed));
+    // Keep the seeded scene free of overlapping vehicles at the driveway tail.
+    const own={...this.player,length:VEHICLES[vehicle].length,width:VEHICLES[vehicle].width,world:playerPath.sample(startS,this.player.offset)};
+    for(const q of this.restaurantQueues)q.cars=q.cars.filter(c=>!q.blocked(c,c.queueS,[own]));
+    this.cars=this.cars.filter(c=>{const pose=this.pathFor(c.kind).sample(c.s,c.offset),hit=restaurantActors(this).some(r=>Math.hypot(pose.x-r.world.x,pose.z-r.world.z)<(c.length+r.length)/2+.5);if(hit)this.exited++;return !hit;});
+    this.rebuildBuckets();
   }
   mainlinePath(exit){
     if(this.mainlinePaths.has(exit))return this.mainlinePaths.get(exit);
@@ -96,7 +103,7 @@ export class TrafficSimulation {
     const p=this.player;if(includePlayer&&Math.abs(this.longitudinalGap(s,'car',p))<(length+VEHICLES[p.vehicle].length)/2+3&&Math.abs(p.offset-offset)<2.6)return;
     const c=this.addCar(s,lane,kind,0);c.length=length;c.schoolQueue=true;c.v0=4.5;c.schoolGate=q.gate;
   }
-  rebuildBuckets(){this.buckets=new Map();for(const c of this.cars){c.station=this.sharedStation(c.s,c.kind);const k=Math.floor(c.station/25);if(!this.buckets.has(k))this.buckets.set(k,[]);this.buckets.get(k).push(c);}}
+  rebuildBuckets(){this.buckets=new Map();for(const c of [...this.cars,...restaurantActors(this)]){c.station=this.sharedStation(c.s,c.kind);const k=Math.floor(c.station/25);if(!this.buckets.has(k))this.buckets.set(k,[]);this.buckets.get(k).push(c);}}
   nearby(s,behind=15,ahead=15,kind=this.player?.vehicle||'car'){if(!this.buckets)return this.cars;s=this.sharedStation(s,kind);const found=[];for(let k=Math.floor((s-behind-30)/25);k<=Math.floor((s+ahead+30)/25);k++){const b=this.buckets.get(k);if(b)found.push(...b);}return found;}
   phase(signal){const t=(this.time+signal.offset)%signal.cycle;
     const blocked=(this.scenario==='incident'&&this.sideQueue>15&&Math.abs(signal.s-this.feedS)<100&&t<Math.min(14,this.sideQueue*.3))||(signal.yellowBox&&Math.abs(signal.s-this.feedS)<130&&t<12);
@@ -111,6 +118,11 @@ export class TrafficSimulation {
 
   incidentState(){if(this.scenario!=='incident')return{label:'一般早尖峰',stage:'normal',capacity:1.55};if(this.time<360)return{label:'國1南下事故處理中',stage:'active',capacity:.35};if(this.time<540)return{label:'事故排除，車流恢復中',stage:'recovering',capacity:lerp(.35,1.55,(this.time-360)/180)};return{label:'國道恢復通行，市區仍在消化車流',stage:'cleared',capacity:1.55};}
   stepTraffic(dt,includePlayer=true){
+    for(const q of this.restaurantQueues||[]){
+      const blockers=this.cars.filter(c=>Math.abs(c.s-q.shop.s)<220).map(c=>({...c,world:this.pathFor(c.kind).sample(c.s,c.offset)}));
+      if(includePlayer){const p=this.player;blockers.push({...p,...VEHICLES[p.vehicle],world:this.pathFor(p.vehicle).sample(p.s,p.offset)});}
+      q.step(dt,blockers);
+    }
     this.time+=dt;for(const c of this.mainlineDepartures)c.age+=dt;this.mainlineDepartures=this.mainlineDepartures.filter(c=>c.age<18&&(!c.mainlinePath||c.mainlineS+c.age*c.speed<c.mainlinePath.length-3));this.rebuildBuckets();this.feedSchoolQueue(includePlayer);const incident=this.incidentState();
     const diversion=this.scenario==='incident'?Math.min(.63,Math.max(0,this.highwayQueue-18)*.006):.025;
     this.highwayQueue=Math.max(0,this.highwayQueue+(1.02-incident.capacity-diversion)*dt);

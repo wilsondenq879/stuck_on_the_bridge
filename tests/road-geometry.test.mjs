@@ -65,7 +65,7 @@ test('park flyover has a solid bottom and fascia from rider height on both appro
     const {bridgeStartS:start,bridgeEndS:end}=path.data.elevatedRanges[0];
     const asphalt=matching(w,id.startsWith('erchong')?'光復路上方園區高架鋪面':'通勤路面');
     assert.equal(path.height(start),0);assert.equal(path.height(end),0);
-    for(const s of [start+66,3580,3710,3830,end-58]){
+    for(const s of [start+66,...[3580,3710,3830].map(s=>s+(id.startsWith('zhubei')?w.route.data.routePrefixMeters||0:0)),end-58]){
       const p=path.sample(s),top=vertical(p.x,p.y+2,p.z,-1,asphalt)[0],bottom=vertical(p.x,1.5,p.z,1,slabs)[0];
       assert.ok(top && bottom,id+' '+s);
       assert.ok(Math.abs(top.point.y-(p.y+.06))<.05);
@@ -116,7 +116,7 @@ test('interchange ramps follow eight directed movements and reconnect at real, p
       }
     }
   }
-  for(const o of interchange.guardrailOpenings){
+  for(const o of w.interchange.guardrailOpenings){
     const p=o.carriageway==='northbound'?w.opposingAt(o.joinS):w.route.sample(o.joinS);
     assert.ok(Math.hypot(p.x-o.x,p.y-o.y,p.z-o.z)<.03);
     assert.ok(w.inOpening(o.joinS,o.joinS,o.carriageway,o.side));
@@ -127,7 +127,7 @@ test('interchange ramps follow eight directed movements and reconnect at real, p
 
 function quietRide(seed){
   const route=worldFor('zhubei-tsmc').route,day=rollDay(seed,route);
-  const sim=new TrafficSimulation(route,{vehicle:'bike',scenario:day.scenario,day,seed,startS:4394.489});
+  const sim=new TrafficSimulation(route,{vehicle:'bike',scenario:day.scenario,day,seed,startS:4394.489+(route.data.routePrefixMeters||0)});
   sim.cars=[];sim.pending=[];sim.rebuildBuckets();return sim;
 }
 test('scooter starts within the bike lane and wet curb contact preserves forward motion',()=>{
