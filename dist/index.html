@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#182e32"><meta name="description" content="沿實際 OpenStreetMap 道路，從竹北經國大橋、慈雲路或竹東二重埔出發，開車或騎機車前往台積電12A與聯發科總部。"><title>還在橋上｜薪築通勤</title><link rel="stylesheet" href="style.css?v=0.6.1"><link rel="stylesheet" href="mobile.css?v=0.6.1"></head>
+<body>
+<main id="game" aria-label="還在橋上，新竹通勤遊戲">
+ <div id="scene"></div><div class="shade"></div>
+ <header id="brand"><span class="brand-mark">117</span><div><strong>還在橋上</strong><span>薪築通勤</span></div></header>
+ <div id="utility"><button id="sound" aria-label="切換聲音" title="切換引擎聲音">聲音 開</button><button id="info" aria-label="路線與資料說明">路線資料</button><button id="cameraBtn" hidden aria-label="切換車內與車尾跟拍視角">車內 ↔</button><button id="pauseBtn" hidden>暫停 <span class="desktop-key">P</span></button></div>
+ <section id="menu" aria-labelledby="title">
+  <div class="intro"><span class="eyebrow">可玩原型 0.8.2　／　築北・貳蟲圃・關薪路</span><h1 id="title">早安。<br>還在橋上。</h1><p class="lead">薪築路上的日常。<br>你選座駕，骰子決定今天。</p><div class="route-label" id="routeSummary"><span class="dot"></span>驚幗大橋 <span>—</span> 辭雲路 <span>—</span> 築瞌</div></div>
+  <div class="setup">
+   <fieldset><legend>01　選擇你的座駕</legend><div class="choices" id="vehicleChoices"><button class="choice selected" data-vehicle="car" aria-pressed="true"><span class="vehicle-symbol car-symbol"><i></i></span><strong>開車</strong><small>汽車通勤 · 雙視角</small></button><button class="choice" data-vehicle="bike" aria-pressed="false"><span class="vehicle-symbol bike-symbol"><i></i></span><strong>騎機車</strong><small>白牌平面路線 · 雙視角</small></button></div></fieldset>
+   <fieldset><legend>02　今天遇到什麼，交給骰子</legend><div class="dice-preview"><span class="dice-icon">⚄</span><div><strong>每天重新擲六顆骰子</strong><p>幗道事故、紅燈照相、違停外送、突然鬼切……<br>還可能從陡坡車庫或天坑支線開始。</p></div></div></fieldset>
+   <div class="route-selectors"><label>從哪出發<select id="originChoice"><option value="zhubei">築北・字牆南路</option><option value="erchong">築冬・貳蟲圃</option><option value="guanxin">關薪路・糠橋接送</option></select></label><label>圓區目的地<select id="destinationChoice"><option value="tsmc">抬雞店12廠（12A）</option><option value="mediatek">連發瞌總部</option></select></label></div><div class="start-row" id="directionRow" hidden><label for="tripDirection">行程</label><select id="tripDirection"><option value="outbound">去程・幗1 → 糠橋 → 圓區</option><option value="return">回程・糠橋 → 名糊路 → 關薪路</option></select></div><p id="routeVehicleNote" class="setup-note" hidden></p><div class="start-row"><label for="startPoint">體驗範圍</label><select id="startPoint"><option value="0">完整通勤 · 含隨機序章</option><option value="bridge">驚幗大橋北端 · 快速體驗</option><option value="city">辭雲路 · 略過序章</option><option value="shops">好事多／迪卡農 · 略過序章</option><option value="park">圓區高架前 · 略過序章</option></select></div>
+   <button id="start" class="primary" disabled><span>正在載入實際路線…</span><span>↗</span></button>
+   <p class="setup-note"><span class="keyboard-setup">W / S 油門煞車 · A / D 左右移 · V 視角 · C 跟車<br></span>手機左搖桿、右踏板 · 右上地圖鍵查看路況</p>
+  </div>
+ </section>
+ <section id="hud" hidden aria-label="駕駛資訊">
+  <div class="navigation"><span class="nav-arrow">↑</span><div><small id="nextLabel">前往築瞌</small><strong id="roadLabel">字牆南路</strong></div><span id="distance">4.67 km</span></div>
+  <div id="weatherLine"></div><div id="rearWarning" hidden>後車閃大燈 · 叭叭！</div><div class="map-panel" id="mapPanel"><div class="map-title"><span id="clock">07:45</span><span id="scenarioTag">一般早尖峰</span></div><canvas id="map" width="480" height="360" aria-label="按實際座標繪製的通勤路線及目前位置"></canvas><div class="map-bottom"><span id="segment">築北 → 築瞌</span><button id="mapToggle" aria-label="切換全程與附近地圖">全程</button></div></div>
+  <div class="drive-tools" aria-label="行車工具">
+   <button id="mobileDetails" aria-label="查看地圖與路況" aria-haspopup="dialog" aria-controls="trafficDialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 6-2 6 3 6-2v15l-6 2-6-3-6 2zM9 3v15m6-12v15"/></svg></button>
+   <button id="mobilePause" aria-label="暫停與設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14m8-14v14"/></svg></button>
+  </div>
+  <div class="mobile-status-row"><div class="signal-note" id="signalNote" hidden><span id="signalLight"></span><span id="signalText"></span></div>
+   <button class="event-chip" id="mobileEvent" hidden aria-haspopup="dialog" aria-controls="trafficDialog" aria-expanded="false"><span aria-hidden="true"></span><span id="mobileEventText">前方路況</span><b aria-hidden="true">›</b></button>
+  </div>
+  <div class="incident-note" id="incidentNote" hidden><div><span class="status-dot amber"></span><strong id="incidentTitle">幗1南下事故處理中</strong></div><p id="incidentDetail">改道車流正在進入市區</p><div class="incident-meter"><span>幗道排隊 <b id="highwayQueue">0</b> 輛</span><span>已分流 <b id="diverted">0</b> 輛</span></div><small>事故與流量為原型情境參數</small></div>
+  <div class="trip"><button id="dayBadge" aria-label="查看今日擲骰與事件">⚄ 今日路況</button><span>已行駛 <b id="travelled">0.00</b> km</span><span>停等 <b id="waiting">0:00</b></span><span id="autoState">手動油門</span></div>
+  <div class="speed-readout"><strong id="speed">0</strong><span>km/h</span><div id="vehicleName">汽車</div></div>
+  <div class="keyboard-hint"><kbd>W</kbd>油門 <kbd>S</kbd>煞車 <kbd>A D</kbd>左右移 <kbd>Q E</kbd>看左右 <kbd>C</kbd>跟車 <kbd>V</kbd>視角 <kbd>H</kbd>喇叭 <kbd>Shift W</kbd>輕油門</div>
+  <div class="touch-controls" id="touchControls" aria-label="手機駕駛控制">
+   <div class="steering-zone">
+    <div class="stick-label"><span>左右橫移</span><span>放手回中</span></div>
+    <div id="touchSteer" class="joystick" role="slider" tabindex="0" aria-label="左右橫移搖桿" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" aria-orientation="horizontal">
+     <span class="stick-guide" aria-hidden="true"><span>‹</span><span>›</span></span>
+     <span class="stick-knob" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m10 11-5 5 5 5m12-10 5 5-5 5M6 16h20"/></svg></span>
+    </div>
+   </div>
+   <div class="pedal-zone">
+    <div class="touch-actions">
+     <button id="touchHorn" aria-label="按喇叭"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h5l7-5v14l-7-5H4zM19 8c2 2 2 6 0 8M7 14v5h3v-5"/></svg><span>喇叭</span></button>
+     <button id="touchAuto" aria-label="切換輔助跟車" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 2-5h8l2 5M4 10h16v8H4zM7 14h2m6 0h2M7 18v2m10-2v2M9 1h6"/></svg><span>跟車</span></button>
+     <button id="touchCamera" aria-label="切換車內與車尾視角"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h4l2-3h6l2 3h4v14H3z"/><circle cx="12" cy="12" r="4"/></svg><span id="touchCameraLabel">車內</span></button>
+    </div>
+    <div class="pedals">
+     <button id="touchBrake" class="pedal brake-pedal" aria-label="按住煞車" aria-pressed="false"><span class="pedal-fill" aria-hidden="true"></span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6v20M16 6v20M23 6v20"/></svg><strong>煞車</strong><small>按住減速</small></button>
+     <button id="touchGas" class="pedal gas-pedal" aria-label="油門，按住並上下滑動調整力道" aria-pressed="false"><span class="pedal-fill" aria-hidden="true"></span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m8 13 8-8 8 8M16 5v22M8 23h16"/></svg><strong>油門</strong><small id="touchGasValue">上滑加速</small></button>
+    </div>
+   </div>
+  </div>
+  <button id="hornBtn" aria-label="按喇叭 H">叭 H</button><div id="padStatus" role="status">手把：連接後按任一鍵</div><div id="cameraFlash" aria-hidden="true"></div><div id="toast" role="status" aria-live="polite"></div>
+ </section>
+ <div class="progress-track" id="progressTrack" hidden><div id="progressFill"></div></div>
+ <footer id="attribution"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors · ODbL</a><span>OSM道路 / Mapzen-USGS-NOAA地形 / 原型交通</span></footer>
+ <dialog id="trafficDialog" aria-labelledby="trafficTitle">
+  <div class="traffic-head"><div><small>通勤資訊 · 已暫停</small><h2 id="trafficTitle">地圖與路況</h2></div><button id="closeTraffic" aria-label="關閉路況，繼續駕駛">×</button></div>
+  <div class="traffic-body"><p id="detailRoute"></p><div id="trafficPanels"></div>
+  <div class="detail-stats"><div><small>已行駛</small><strong id="detailDistance">0.00 km</strong></div><div><small>停等</small><strong id="detailWait">0:00</strong></div><div><small>遊戲扣分</small><strong id="detailPoints">0</strong></div></div>
+  <p class="detail-context" id="detailContext"></p></div>
+  <div class="traffic-footer"><button id="detailDice">今日骰子與事件</button><button class="primary" id="trafficResume">繼續駕駛 →</button></div>
+ </dialog>
+ <dialog id="pauseDialog"><span class="eyebrow">TAKE A BREATH</span><h2>先停一下。</h2><p>車流與計時已暫停。</p><div class="dialog-actions"><button class="primary" id="resume">繼續通勤 →</button><button id="restart">回到出發設定</button></div><label class="range-row">模擬速度 <select id="timeScale"><option value="1">1× · 正常時間</option><option value="2">2× · 全世界加速</option><option value="3">3× · 全世界加速</option></select></label><div class="audio-options"><button id="masterSoundBtn">聲音 開</button><button id="bgmBtn">BGM 開</button><button id="rageBtn">怒罵 開</button></div><small>聲音、BGM、怒罵可個別切換。怒罵包含成人粗口。<br>加速會同時影響車輛、號誌及事件；左右換道仍由你控制。</small></dialog>
+ <dialog id="resultDialog"><span class="eyebrow">YOU MADE IT</span><h2 id="resultTitle">到了，築瞌。</h2><p id="resultSubtitle"></p><div id="results"></div><p id="resultEvents"></p><button id="returnTrip" class="primary" hidden>經名糊路開回關薪路 ↗</button><button id="again" class="primary">明天，再擲一次 ↗</button></dialog>
+ <dialog id="infoDialog"><span class="eyebrow">REAL ROADS, PROTOTYPE TRAFFIC</span><h2>這條路，從哪裡來。</h2><p id="routeDescription">依 OpenStreetMap 實際道路座標：築北字牆南路 → 驚幗大橋 → 辭雲路 → 圓區一路。南下先經過左側 好事多，再經過迪卡農。汽車走圓區一路高架橋，白牌機車走平面與機車道。公司與距離依所選路線更新。</p><p id="routeDestination"></p><p>貳蟲圃街景按照片與Google街景抽查重建：集合住宅成群、最高14層；忠腥路四段保留田地及退縮廠辦，光負路沿街以3–5層老透天、店面、雨棚與電線為主。地下室出口先經社區大門，再接低層街廓；社區造型參考猩都繪B區，但坡度與配置仍為遊戲化重建。</p><p>築北出發的機車從高架前分流，圓區內另採 OSM 機車道線形，之後重新匯入共同道路。高架採晨間南下兩線的原型配置，實際可變車道以現場號誌為準。車道數採圖資標記，缺漏路段使用原型值。建物輪廓與水域來自地圖，外觀、部分高度、橋面坡度及號誌秒數為示意。</p><p>事故情境以幗道容量、待上匝道隊伍與改道需求產生市區車流，並由跟車、併道與號誌形成回堵。這是局部交通模型，尚未以實測流量校準，也不是即時路況。</p><p>山景使用128×128真實區域高程：十八肩衫在西南、飛俸衫／忠坑衫在東南、五趾衫在南南東。山峰依OSM座標標示，高程資料約2017年、網格約260–290m；道路周圍做平坦銜接，非工程道路坡度。晴天、雨天、颱風與地震由每日骰子決定，不是即時天氣或預測。</p><p>每日骰子決定事件，不提供選擇事故的選單。橋頭號誌週期、取締點位、違停外送與鬼切均為虛構遊戲設定；取締記錄使用遊戲扣分，不代表實際罰鍰。喜來燈周邊天坑及貳蟲圃地下室是獨立虛構序章，並非主線地理延伸、飯店事故或特定建案重現。</p><p>駕駛採固定路線與循線輔助，可控制加減速、轉向與車道位置。C 開啟遊戲輔助跟車；此功能也適用機車，方便觀察交通。A/D直接橫向移動，放開即停止橫移，鏡頭不跟著畫弧。單次紅燈不超過60秒。</p><p>手把：先在手機／電腦配對藍牙，再回到遊戲按任一鍵。支援瀏覽器辨識為 standard 的配置：左搖桿橫向換道、RT/R2 油門、LT/L2 煞車、右搖桿察看、RB/R1 喇叭、Y/△ 換視角、X/□ 跟車、Menu 暫停、A/× 確認。手機：左側搖桿左右橫移、放手回中；右側油門按住後上滑加大、下滑減小，旁邊為煞車。喇叭、跟車與視角按鈕放在踏板上方。手機行車時顯示精簡導航，右上地圖鍵查看地圖、事故與里程；暫停鍵可切換聲音。可同時轉向與踩踏板；暫停、切換分頁或旋轉螢幕會清除觸控輸入。W+Shift 為六成油門。</p><p><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap / ODbL</a> · <a href="data/routes/index.json" target="_blank">查看四條路線與公司來源</a> · <a href="https://gdd.hsinchu.gov.tw/News_Content.aspx?n=1406&s=247757" target="_blank" rel="noopener">築北匝道回堵機制參考</a></p><button id="closeInfo" class="primary">回到路上</button></dialog>
+ <dialog id="dayDialog"><span class="eyebrow">TODAY’S DICE</span><h2>今天，骰子說了算。</h2><div id="diceResult"></div><p id="dayList"></p><p id="violationList"></p><small id="seedLabel"></small><p><a id="replayLink">重播同一組骰子</a></p><button id="closeDay" class="primary">回到路上 →</button></dialog>
+ <div id="error" hidden role="alert"><h2>畫面暫時無法啟動</h2><p id="errorText"></p><button onclick="location.reload()">重新載入</button></div>
+</main><script type="module" src="app.js?v=0.8.2-puns"></script></body></html>

@@ -1,0 +1,129 @@
+/* Two-thumb driving controls. The center of the screen stays clear for traffic. */
+.touch-controls{display:none;pointer-events:none;z-index:6;}
+.touch-controls>div{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.touch-controls button,.joystick{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.touch-controls button{min-width:0;height:48px;padding:0;border:1px solid #d8e5cf70;border-radius:14px;background:#17383ee8;color:#f2f0db;font-size:12px;box-shadow:0 3px 14px #0c222449}
+.touch-controls button:hover{background:#244a50}
+.touch-controls button:active{transform:none}
+.touch-controls button:focus-visible,.joystick:focus-visible{outline:3px solid #f0ca80;outline-offset:4px}
+.touch-controls svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.touch-controls .steering-zone{width:var(--stick-size);gap:8px;flex:none}
+.stick-label{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#f0efdb;text-shadow:0 1px 5px #09252b}
+.stick-label span:last-child{font-size:10px;color:#d0dfd6}
+.joystick{width:var(--stick-size);height:var(--stick-size);border:1px solid #d2e2ca6e;border-radius:50%;background:radial-gradient(circle,#34575c55 40%,#18393cbf 41%,#122f35bb 69%,#c1d2ba33 70%);box-shadow:inset 0 0 0 10px #b9cebd0a,0 6px 22px #0c282c2e;display:grid;place-items:center;position:relative}
+.stick-guide{position:absolute;inset:0 10px;display:flex;justify-content:space-between;align-items:center;font-size:28px;font-weight:300;color:#dce9ce9c;pointer-events:none}
+.stick-knob{display:grid;place-items:center;width:48%;height:48%;border:1px solid #e3e7caa3;border-radius:50%;background:linear-gradient(145deg,#d2d9bb,#829c8c);box-shadow:0 5px 18px #081e2873,inset 0 1px 2px #ffffff80;color:#25434a;pointer-events:none;transition:transform .12s ease-out}
+.stick-knob svg{width:29px;height:29px}
+.joystick.held{border-color:#f2df9d;background-color:#d5d8ad12}
+.joystick.held .stick-knob{transition:none;background:linear-gradient(145deg,#f6edbd,#aabc94)}
+.touch-controls .pedal-zone{width:var(--pedal-width,164px);gap:8px;flex:none}
+.touch-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.touch-actions button{height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px}
+#touchHorn{background:#4c4930eb;border-color:#e5cc8c9c;color:#f5e6b8}
+#touchAuto.selected{background:#60846fe8;border-color:#f5e6b7}
+.pedals{display:grid;grid-template-columns:minmax(0,.86fr) minmax(0,1fr);gap:8px;align-items:end}
+.touch-controls button.pedal{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;overflow:hidden;border-radius:17px;height:var(--pedal-height);transition:border-color .1s,box-shadow .1s}
+.pedal>*{pointer-events:none}
+.pedal strong{font-weight:600;font-size:17px;letter-spacing:.08em}
+.pedal small{font-size:10px;color:inherit;opacity:.9;white-space:nowrap}
+.pedal svg{width:28px;height:28px;margin-bottom:3px}
+.touch-controls button.brake-pedal{height:calc(var(--pedal-height) - 24px);background:#3e4142ed;border-color:#e4c3b28c;color:#f5ded2}
+.touch-controls button.gas-pedal{background:#284e48ed;border-color:#e5dfa39c;color:#eef1c9}
+.pedal-fill{position:absolute;inset:0;z-index:-1;transform-origin:bottom;transform:scaleY(var(--pedal,0));background:#a1be7d55}
+.brake-pedal .pedal-fill{background:#bc80654d}
+.touch-controls button.held{border-color:#fff1b8;box-shadow:0 0 0 2px #ffefac38,0 4px 20px #09212a66}
+
+.drive-tools,.event-chip{display:none}
+.mobile-status-row{display:contents}
+.drive-tools svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#trafficDialog{position:fixed;inset:auto 12px calc(10px + env(safe-area-inset-bottom,0px));width:calc(100% - 24px);max-width:490px;max-height:calc(100dvh - 22px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));margin:0 auto;padding:0 16px 14px;border-radius:18px;background:#142e33;overscroll-behavior:contain;scrollbar-width:thin}
+#trafficDialog[open]{display:flex;flex-direction:column;overflow:hidden}
+.traffic-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 8px;background:#142e33}
+.traffic-body{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+#trafficDialog .traffic-head small{font-size:11px;margin:0;letter-spacing:.06em}
+#trafficDialog h2{font-size:23px;margin:3px 0}
+#closeTraffic{width:44px;height:44px;border-radius:50%;font-size:23px;line-height:1;padding:0}
+#detailRoute{font-size:13px;line-height:1.5;margin:6px 0 12px}
+#trafficPanels{display:grid;gap:10px}
+#trafficDialog .map-panel{display:block;position:static;inset:auto;width:100%;max-width:100%;border-radius:10px}
+#trafficDialog .map-title{padding:8px 12px}
+#trafficDialog #map{height:auto;width:100%;max-height:min(230px,32dvh);object-fit:contain}
+#trafficDialog .map-bottom{padding:0 10px 3px}
+#trafficDialog #segment{display:inline}
+#trafficDialog #mapToggle{min-height:44px;min-width:56px;font-size:12px}
+#trafficDialog .incident-note{position:static;inset:auto;width:auto;max-width:none;transform:none;padding:10px 12px}
+#trafficDialog .incident-note strong{font-size:13px}
+#trafficDialog .incident-note p{display:block;margin:4px 0 8px;font-size:12px}
+#trafficDialog .incident-meter:not([hidden]){display:flex}
+#trafficDialog .incident-note small{display:block;margin-top:6px}
+.detail-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.detail-stats>div{border-top:1px solid #d7e4d133;padding-top:7px}
+#trafficDialog .detail-stats small{margin:0;font-size:11px}
+.detail-stats strong{font:500 16px CommuteMono,monospace}
+#trafficDialog .detail-context{margin:6px 0 12px;font-size:11px}
+.traffic-footer{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:8px;border-top:1px solid #d7e4d128}
+.traffic-footer button{font-size:13px;min-height:46px;padding:9px 12px;justify-content:center}
+
+@media(any-pointer:coarse),(max-width:900px),(max-height:500px){
+  #game{height:100dvh;--side:12px;--left-gap:calc(var(--side) + env(safe-area-inset-left,0px));--right-gap:calc(var(--side) + env(safe-area-inset-right,0px));--top-gap:calc(10px + env(safe-area-inset-top,0px));--control-bottom:calc(19px + env(safe-area-inset-bottom,0px));--stick-size:120px;--pedal-width:164px;--pedal-height:108px;--speed-size:31px}
+  body.playing{overscroll-behavior:none}
+  body.playing #brand,body.playing #utility,body.playing .keyboard-hint,body.playing #padStatus,body.playing #hornBtn,body.playing #hud .map-panel,body.playing #hud #weatherLine,body.playing #hud .incident-note,body.playing #hud .trip,.desktop-key,.keyboard-setup{display:none}
+  .setup-note{font-size:12px;line-height:1.6}
+  body.playing #hud .navigation{position:absolute;top:var(--top-gap);left:var(--left-gap);right:calc(var(--right-gap) + 102px);width:auto;min-width:0;max-width:370px;height:46px;padding:6px 12px;gap:9px;border-radius:13px;align-items:center;background:#163239ed}
+  body.playing .navigation>div{min-width:0;flex:1}
+  body.playing .navigation .nav-arrow{font-size:22px;line-height:1}
+  body.playing .navigation small{display:none}
+  body.playing .navigation strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600;letter-spacing:.02em}
+  body.playing .navigation>#distance{font-size:11px;margin-left:0!important;white-space:nowrap}
+  .drive-tools{position:absolute;z-index:6;top:var(--top-gap);right:var(--right-gap);display:flex;gap:8px}
+  .drive-tools button{display:grid;place-items:center;width:44px;height:46px;padding:0;touch-action:manipulation;border-radius:13px;background:#163239ed}
+  .mobile-status-row{position:absolute;top:calc(var(--top-gap) + 52px);left:var(--left-gap);right:var(--right-gap);display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+  body.playing .signal-note{position:static;inset:auto;min-width:0;max-width:68%;height:auto;min-height:29px;align-items:center;gap:6px;padding:5px 9px;border-radius:9px;font-size:11px;line-height:1.45;background:#18363ce6}
+  .signal-note>span:first-child{flex:none}
+  .event-chip{position:relative;display:inline-flex;gap:6px;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin:-7px 0 0 auto;padding:8px 9px;border:0;background:transparent!important;box-shadow:none;color:#f5e1b7;font-size:11px;max-width:58%;pointer-events:auto;touch-action:manipulation;isolation:isolate}
+  .event-chip:before{content:'';position:absolute;inset:7px 0;z-index:-1;border:1px solid #d5b88077;border-radius:9px;background:#403f2aed}
+  .event-chip>span:first-child{flex:none;width:5px;height:5px;border-radius:50%;background:#f0bd79}
+  #mobileEventText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .event-chip b{font-size:16px;font-weight:400;line-height:1}
+  body.playing .touch-controls{position:absolute;left:var(--left-gap);right:var(--right-gap);bottom:var(--control-bottom);display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
+  .touch-controls .steering-zone{gap:5px}
+  .stick-label{justify-content:center;font-size:10px;line-height:1.2}
+  .stick-label span:last-child{display:none}
+  .touch-controls .pedal-zone{width:var(--pedal-width)}
+  .touch-actions button{height:44px;font-size:10px;gap:1px;border-radius:12px}
+  .touch-actions button svg{width:19px;height:19px}
+  .touch-controls button.pedal{gap:3px;border-radius:16px}
+  .pedal strong{font-size:16px}
+  .pedal svg{width:25px;height:25px;margin:0}
+  body.playing .speed-readout{position:absolute;left:calc((100% + var(--left-gap) - var(--right-gap) + var(--stick-size) - var(--pedal-width)) / 2);right:auto;bottom:calc(var(--control-bottom) + 34px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:0;line-height:1;color:#f4f2de;text-shadow:0 1px 5px #0c242c,0 2px 12px #0c242c;pointer-events:none}
+  body.playing .speed-readout strong{font-size:var(--speed-size);font-variant-numeric:tabular-nums}
+  body.playing .speed-readout>span{font-size:10px;font-weight:600;letter-spacing:.03em}
+  body.playing .speed-readout>div{display:none}
+  body.playing #toast,body.playing #rearWarning{position:absolute;top:calc(var(--top-gap) + 93px);left:50%;transform:translateX(-50%);max-width:80%;width:max-content;font-size:11px;line-height:1.45;padding:6px 10px;border-radius:9px;z-index:5;pointer-events:none}
+  body.playing #toast{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  body.playing #rearWarning:not([hidden])~#toast{visibility:hidden}
+  body.playing #attribution{bottom:calc(3px + env(safe-area-inset-bottom,0px));left:var(--left-gap);right:var(--right-gap);font-size:8px;pointer-events:none}
+  body.playing #attribution>span{display:none}
+  body.playing #attribution a{pointer-events:auto}
+  #pauseDialog .audio-options{gap:8px}
+  #pauseDialog .audio-options button{min-height:44px;padding:7px}
+}
+@media(max-width:380px){
+  #game{--stick-size:108px;--pedal-width:158px;--pedal-height:100px;--speed-size:27px}
+}
+@media(max-width:340px){
+  #game{--side:10px;--stick-size:100px;--pedal-width:150px;--pedal-height:96px;--speed-size:23px}
+  body.playing #hud .navigation{gap:6px;padding:6px 8px}
+  body.playing .navigation strong{font-size:13px}
+  body.playing .navigation .nav-arrow{display:none}
+}
+@media(max-height:500px){
+  #game{--stick-size:106px;--pedal-height:92px;--control-bottom:calc(17px + env(safe-area-inset-bottom,0px))}
+  body.playing #hud .navigation{max-width:320px}
+  body.playing .speed-readout{bottom:calc(var(--control-bottom) + 6px)}
+  .pedal strong{font-size:14px}
+  .pedal svg{width:21px;height:21px}
+  #trafficDialog{max-width:600px}
+  #trafficDialog #map{max-height:120px}
+}
+@media(prefers-reduced-motion:reduce){.stick-knob{transition:none}}
