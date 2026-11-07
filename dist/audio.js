@@ -41,7 +41,7 @@ export class CommuteAudio {
  clipFor(line){
   if(!this.ctx) return Promise.resolve(null);
   if(!this.clips.has(line.id)){
-   const url=new URL('./audio/'+line.id+'.wav?v=0.7.0',import.meta.url);
+   const url=new URL('./audio/'+line.id+'.wav?v=0.9.4',import.meta.url);
    const load=fetch(url).then(async response=>{
     if(!response.ok) throw Error('Voice clip unavailable');
     return this.ctx.decodeAudioData(await response.arrayBuffer());
@@ -77,7 +77,7 @@ export class CommuteAudio {
   let timer;
   const buffer=await Promise.race([
    this.clipFor(line),
-   new Promise(resolve=>{timer=setTimeout(()=>resolve(null),900);}),
+   new Promise(resolve=>{timer=setTimeout(()=>resolve(null),4500);}),
   ]);
   clearTimeout(timer);
   if(request!==this.voiceRequest) return;
@@ -95,13 +95,6 @@ export class CommuteAudio {
    };
    this.voiceSource=source;
    source.start();
-  }else if(window.speechSynthesis && window.SpeechSynthesisUtterance){
-   const speech=new window.SpeechSynthesisUtterance(line.text);
-   speech.lang='zh-TW';speech.rate=1.08;speech.volume=rear?.58:.75;
-   this.utterance=speech;
-   const clear=()=>{if(this.utterance===speech)this.utterance=null;};
-   speech.onend=clear;speech.onerror=clear;
-   window.speechSynthesis.speak(speech);
   }
   this.onCaption(line.text,kind,buffer?.duration??estimate);
   this.clipFor(this.nextLine(kind));

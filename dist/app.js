@@ -6,7 +6,7 @@ import {DrivingWorld} from './world.js?v=0.9.3';
 import {rollDay,dayLabels,LocalChallenge} from './day.js?v=0.8.0';
 import {readGamepad,mergeControls} from './controls.js';
 import {WEATHER,earthquakeAt} from './environment.js';
-import {CommuteAudio} from './audio.js?v=0.9.3';
+import {CommuteAudio} from './audio.js?v=0.9.4';
 import {TouchDriveInput,bindTouchControls} from './touch-controls.js';
 
 installGameText(document.body);

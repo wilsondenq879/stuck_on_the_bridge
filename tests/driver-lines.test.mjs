@@ -41,6 +41,13 @@ test('every line has its own playable 24 kHz recording and matching caption', ()
   assert.ok(DRIVER_LINES.slow.some(line=>line.text==='開這麼慢，車子壞了是不是？'));
 });
 
+test('a failed voice download shows the caption without substituting a different voice', async t => {
+  const captions=[];const audio=new CommuteAudio((...args)=>captions.push(args));
+  audio.active=true;audio.picker=new DriverLinePicker(()=>0);audio.ctx={decodeAudioData:async()=>{throw Error('bad audio')}};
+  t.mock.method(globalThis,'fetch',async()=>new Response('',{status:503}));
+  await audio.react('slow');assert.equal(captions[0][0],'開這麼慢，車子壞了是不是？');assert.equal(captions.length,1);
+});
+
 test('each situation uses a full round of lines before repeating, even at a round boundary', () => {
   const deck = new DriverLinePicker(seeded(251));
   for (const [kind, lines] of Object.entries(DRIVER_LINES)) {
