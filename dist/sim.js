@@ -1,4 +1,4 @@
-import {RestaurantQueue,restaurantActors} from './restaurant-queues.js?v=0.9.1';
+import {RestaurantQueue,restaurantActors} from './restaurant-queues.js?v=0.9.2';
 import {Route,clamp,lerp,seeded} from './geo.js?v=0.8.0';
 import {recordViolation} from './day.js';
 import {WEATHER,earthquakeAt,windAt} from './environment.js';

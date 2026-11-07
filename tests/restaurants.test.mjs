@@ -70,3 +70,26 @@ test('store shells and queue lanes leave scooter corridors clear, and interchang
   const tree=w.route.data.restaurants[0].queuePath[10];assert.equal(w.clearance.free(tree.x,tree.z,.3,0,3),false);
  }
 });
+
+test('chase cameras see the queue ahead without entering a rear car; cockpit and opposite-side traffic remain visible',async()=>{
+ const {visibleRestaurantActors}=await import('../dist/restaurant-queues.js');
+ const d=read('tsmc-guanxin'),r=new Route(d),q=new RestaurantQueue(d.restaurants[0],r,7301),rear=q.cars.find(c=>c.queueS<70);
+ const pose=q.path.sample(rear.queueS+7),sim={restaurantQueues:[q]},all=q.cars.map(c=>c.id);
+ assert.ok(!visibleRestaurantActors(sim,pose,true).some(c=>c.id===rear.id));
+ assert.ok(visibleRestaurantActors(sim,pose,false).some(c=>c.id===rear.id));
+ assert.ok(visibleRestaurantActors(sim,pose,true).some(c=>c.queueS>rear.queueS+15));
+ assert.deepEqual(q.cars.map(c=>c.id),all,'camera filtering must not delete physical traffic');
+ const outbound=read('guanxin-tsmc'),or=new Route(outbound),oq=new RestaurantQueue(outbound.restaurants[0],or,7301);
+ assert.equal(visibleRestaurantActors({restaurantQueues:[oq]},or.sample(outbound.restaurants[0].s-45),true).length,oq.cars.length,'opposite-side drive-through must remain visible');
+});
+
+test('restaurant previews start upstream of yellow boxes and never penalize a newly spawned waiting player',async()=>{
+ const {safeRoadStart}=await import('../dist/quick-start.js'),{rollDay}=await import('../dist/day.js');
+ for(const id of ['guanxin-tsmc','tsmc-guanxin']){
+  const d=read(id),r=new Route(d),start=safeRoadStart(d.restaurants[0].s-65,d.intersections),day=rollDay(7301,r),sim=new TrafficSimulation(r,{startS:start,day,seed:day.seed});
+  assert.ok(day.yellowBox);
+  for(let i=0;i<100;i++)sim.step(.1,{brake:1});
+  assert.equal(day.points,0);assert.equal(sim.player.s,start);assert.ok(!sim.signals.some(l=>sim.player.s>l.s-2&&sim.player.s<l.s+20));
+ }
+ assert.equal(safeRoadStart(98,[{s:100,signalTagged:true}],9.8),75.1);
+});

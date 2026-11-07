@@ -65,3 +65,14 @@ export function alignInterchange(data,prefix=0){
 }
 
 export function restaurantActors(sim){return (sim.restaurantQueues||[]).flatMap(q=>q.cars);}
+
+// A chase camera sits behind the player. Hide only the cars that would occupy
+// that camera corridor; keep their collision proxies and every visible queue.
+export function visibleRestaurantActors(sim,pose,chase=false){
+ return restaurantActors(sim).filter(c=>{
+  const dx=c.world.x-pose.x,dz=c.world.z-pose.z;
+  if(Math.hypot(dx,dz)>570)return false;
+  const along=dx*pose.tx+dz*pose.tz,across=dx*pose.rx+dz*pose.rz;
+  return !(chase&&along<0&&along>-18&&Math.abs(across)<3);
+ });
+}

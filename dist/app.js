@@ -1,11 +1,12 @@
+import {safeRoadStart} from './quick-start.js?v=0.9.2';
 import {drawText,installGameText} from './game-text.js?v=0.8.2-puns';
 import {Route,clamp,lerp} from './geo.js?v=0.8.0';
-import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.1';
-import {DrivingWorld} from './world.js?v=0.9.1';
+import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.2';
+import {DrivingWorld} from './world.js?v=0.9.2';
 import {rollDay,dayLabels,LocalChallenge} from './day.js?v=0.8.0';
 import {readGamepad,mergeControls} from './controls.js';
 import {WEATHER,earthquakeAt} from './environment.js';
-import {CommuteAudio} from './audio.js?v=0.9.1';
+import {CommuteAudio} from './audio.js?v=0.9.2';
 import {TouchDriveInput,bindTouchControls} from './touch-controls.js';
 
 installGameText(document.body);
@@ -67,7 +68,7 @@ $('start').addEventListener('click',async()=>{
   day=rollDay(freshSeed(),route);scenario=day.scenario;
   const choice=$('startPoint').value;const erchong=data.originLabel?.startsWith('二重埔');let startS=choice==='bridge'?(data.landmarks.find(x=>x.kind==='bridge')?.s||705)+20:choice==='city'?(erchong?(data.landmarks.find(x=>x.name==='關東橋')?.s||3000):(data.eventRegions?.urbanStartS||2476))+15:choice==='shops'?(data.retailLandmarks?.[0]?.s||3032)-180:choice==='park'?(data.elevatedRanges?.[0]?.startS||data.eventRegions?.parkEntryS||3779)-60:choice==='arrival'?Math.max(0,data.lengthMeters-650):0;
   if(choice==='guanxinPark'){const path=vehicle==='bike'?sim?.bikeRoute:route,area=data.landscapeAreas?.find(a=>a.osmId===134204596);if(area){const center=area.points.reduce((p,q)=>({x:p.x+q.x/area.points.length,z:p.z+q.z/area.points.length}),{x:0,z:0});startS=Math.max(0,path.nearest(center.x,center.z).s-18);}}
-  if(choice==='restaurant'){const shop=data.restaurants?.[0];if(shop)startS=Math.max(0,(vehicle==='bike'?shop.bikeS:shop.s)-65);}
+  if(choice==='restaurant'){const shop=data.restaurants?.[0];if(shop)startS=safeRoadStart(Math.max(0,(vehicle==='bike'?shop.bikeS:shop.s)-65),vehicle==='bike'?data.bikeIntersections:data.intersections,VEHICLES[vehicle].length);}
   const quick=data.quickStarts?.find(q=>q.value===choice);if(quick)startS=vehicle==='bike'?(quick.bikeS??quick.s):quick.s;
   sim=new TrafficSimulation(route,{vehicle,scenario,startS,day,seed:day.seed});sim.startS=startS;
   challenge=choice==='0'&&day.chapter?new LocalChallenge(day,vehicle):null;
@@ -208,7 +209,7 @@ function showError(e){console.error(e);$('errorText').textContent=`無法載入 
 async function loadRoute(id){
  const token=++routeLoadToken;ready=false;$('start').disabled=true;$('start').firstElementChild.textContent='正在建構實際路線…';
  const entry=routeIndex.routes.find(r=>r.id===id);if(!entry)throw new Error('找不到路線');
- const response=await fetch('data/routes/'+entry.file+'?v=0.9.1');if(!response.ok)throw new Error('路線資料讀取失敗');const next=await response.json();if(token!==routeLoadToken)return;
+ const response=await fetch('data/routes/'+entry.file+'?v=0.9.2');if(!response.ok)throw new Error('路線資料讀取失敗');const next=await response.json();if(token!==routeLoadToken)return;
  if(next.sceneryProfile==='south-hsinchu'){
   guanxinData??=await fetch('data/guanxin.json?v=0.8.1').then(r=>{if(!r.ok)throw new Error('關新街廓讀取失敗');return r.json();});
   next.guanxinBuildings=guanxinData.buildings;
