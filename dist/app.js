@@ -2,7 +2,7 @@ import {loadHsr,RailView} from './hsr.js?v=099';
 import {safeRoadStart} from './quick-start.js?v=0.9.3';
 import {loadBlenderAssets,loadBlenderChapter} from './blender-assets.js?v=0.9.7';
 import {BlenderRoads} from './blender-roads.js?v=0.9.8';
-import {BlenderScenery} from './blender-scenery.js?v=0.9.8.1';
+import {BlenderScenery} from './blender-scenery.js?v=skywalk1';
 import {WorldArchive} from './world-archive.js?v=0.9.7';
 import {drawText,installGameText} from './game-text.js?v=0.8.2-puns';
 import {Route,clamp,lerp} from './geo.js?v=0.9.8';
@@ -75,6 +75,11 @@ $('start').addEventListener('click',async()=>{
  try{
   day=rollDay(freshSeed(),route);scenario=day.scenario;
   const choice=$('startPoint').value;const erchong=data.originLabel?.startsWith('二重埔');let startS=choice==='bridge'?(data.landmarks.find(x=>x.kind==='bridge')?.s||705)+20:choice==='city'?(erchong?(data.landmarks.find(x=>x.name==='關東橋')?.s||3000):(data.eventRegions?.urbanStartS||2476))+15:choice==='shops'?(data.retailLandmarks?.[0]?.s||3032)-180:choice==='park'?(data.elevatedRanges?.[0]?.startS||data.eventRegions?.parkEntryS||3779)-60:choice==='arrival'?Math.max(0,data.lengthMeters-650):0;
+  if(choice==='skywalk'){
+   const path=sim.pathFor(vehicle);
+   const approach=path.nearest(-1418.70,2945.98).s-72;
+   startS=safeRoadStart(approach,vehicle==='bike'?data.bikeIntersections:data.intersections,VEHICLES[vehicle].length);
+  }
   if(choice==='hsr'&&world.hsr)startS=safeRoadStart(world.hsr.stations[vehicle]-113,vehicle==='bike'?data.bikeIntersections:data.intersections,VEHICLES[vehicle].length);
   if(choice==='guanxinPark'){const path=vehicle==='bike'?sim?.bikeRoute:route,area=data.landscapeAreas?.find(a=>a.osmId===134204596);if(area){const center=area.points.reduce((p,q)=>({x:p.x+q.x/area.points.length,z:p.z+q.z/area.points.length}),{x:0,z:0});startS=Math.max(0,path.nearest(center.x,center.z).s-18);}}
   if(choice==='guanxinGuangfu'){const path=vehicle==='bike'?sim?.bikeRoute:route;startS=Math.max(0,path.nearest(-810.72,3767.13).s-48);}
@@ -243,8 +248,10 @@ async function loadRoute(id){
  $('routeVehicleNote').hidden=entry.originKey!=='guanxin';$('routeVehicleNote').textContent=vehicleRouteNote();
  const options=[['0',data.sceneryProfile==='south-hsinchu'?(data.direction==='return'?'完整回程 · 經康橋、明湖路':'完整去程 · 經康橋再進園區'):'完整通勤 · 含隨機序章']];if(entry.originKey==='zhubei')options.push(['bridge','經國大橋 · 略過序章'],['city','慈雲路 · 略過序章'],['shops','Costco／迪卡儂 · 略過序章']);else if(entry.originKey==='erchong')options.push(['city','關東橋／光復路 · 略過序章']);options.push(['park','園區入口 · 略過序章'],['arrival','公司前 650 m · 略過序章']);
  if(data.quickStarts)options.splice(1,options.length-1,...data.quickStarts.filter(q=>vehicle!=='bus'||q.s<data.schoolStop.s).map(q=>[q.value,q.label]));if(entry.originKey==='guanxin'){options.splice(1,0,['guanxinPark','關新公園・遊戲場旁']);if(data.direction!=='return')options.splice(1,0,['yiji','壹集・關薪路社區旁'],['guanxinGuangfu','關新路・往光復路'],['jieshou','介壽路・園區入口牌樓']);}if(entry.originKey==='erchong')options.splice(1,0,['hsr','糕鐵過橋・東科路口前']);if(data.restaurants?.length)options.splice(1,0,['restaurant','麥當勞・得來速車龍旁']);if(vehicle==='bus')options[0][1]='完整交通車任務・關新路 → 糠橋';
+ if(entry.originKey==='zhubei')options.splice(1,0,['skywalk','慈雲路・商圈空橋前']);
  $('startPoint').replaceChildren(...options.map(([value,label])=>{const o=document.createElement('option');o.value=value;o.textContent=label;return o;}));
- if(new URLSearchParams(location.search).get('start')==='hsr'&&entry.originKey==='erchong')$('startPoint').value='hsr';
+ const quickLink=new URLSearchParams(location.search).get('start');
+ if(['hsr','skywalk'].includes(quickLink)&&options.some(([value])=>value===quickLink))$('startPoint').value=quickLink;
  $('routeSummary').textContent=vehicle==='bus'?'關新路 → 國道一號・國道三號 → 糠橋水滴廣場':entry.originKey==='guanxin'?(data.direction==='return'?data.originLabel+' → 康橋 → 明湖路 → 關新路':'關新路 → '+(vehicle==='bike'?'寶山平面道路':'國道一號・國道三號')+' → 康橋 → '+data.destinationLabel):data.routeSummary||entry.routeSummary||(entry.originKey==='zhubei'?'經國大橋 → 慈雲路':'中興路四段 → 光復路')+' → '+entry.destinationLabel;
  $('routeDescription').textContent=data.originLabel+' → '+data.landmarks.filter(x=>x.s>0&&x.s<data.lengthMeters-50).map(x=>x.name).join(' → ')+' → '+data.destinationLabel+'。汽車 '+(data.lengthMeters/1000).toFixed(2)+' km；機車 '+(data.bikeLengthMeters/1000).toFixed(2)+' km。';
  $('routeDestination').textContent=vehicle==='bus'?'駛入水滴廣場停靠兩秒，繞回柴喬路完成接送。':data.sceneryProfile==='south-hsinchu'?(data.direction==='return'?'經康橋校外接送點、明湖路回關新路。':'經康橋校外接送點後，前往'+data.destinationLabel+'。'):data.destination.address+'；終點位於廠區外的公共道路接入點，非警衛門實測。'+(entry.destinationKey==='tsmc'?'12廠選用12A／總部。':'');
