@@ -192,3 +192,9 @@ v0.6.1：手機車內與機車儀表不再重複顯示3D時速數字，保留下
 0.9.6：依關新路往光復路參考照片，重建關新路21號大樓立面、路口店面與植栽，新增附近快速起點；建物輪廓會避開可行駛道路。
 
 0.9.7：八條路線的道路、橋梁、地表、遠山及既有建築街景以 Blender 轉出，採 500 公尺區塊及 GitHub Pages 分段下載；不支援分段的伺服器會退回下載整條路線資源包。喜來燈天坑與貳蟲圃車庫序章、機車、交通車、車內儀表台和兩間速食店的金色雙拱招牌也使用 Blender 模型。天候、雨刷、號誌、交通與互動邏輯仍即時運算。可選七種虛構諧音廠牌與轎車／休旅車，車流混合不同模型；車身是受各廠牌風格啟發的簡化造型，並非原廠授權或精確車型模型。瀝青材質由 Blender 程序產生，沒有使用 Draw Things 圖像。可編輯的 `.blend` 檔與製作腳本保存在 `blender/`。
+
+### 二重埔的高鐵（0.9.9）
+
+從明星路口出發約 2.25 km，中興路四段在東科路口前穿過高鐵。兩個目的地共用實際交點（約 24.77747, 121.03346）。雙股道位置取自 OpenStreetMap [東軌](https://www.openstreetmap.org/way/141727603)與[西軌](https://www.openstreetmap.org/way/199777701)，© OpenStreetMap contributors，ODbL。橋高、支柱和架線是遊戲近似；車輛外觀參考[台灣高鐵 700T 十二輛編組](https://www.thsrc.com.tw/ArticleContent/4fe8c81c-d66f-472f-90a7-cac6fb4deba8)。
+
+[直接體驗高鐵過橋](https://wilsondenq879.github.io/stuck_on_the_bridge/?route=erchong-tsmc&start=hsr)。完整行程經過也會看到，毋須抽中事件。班距配合駕駛接近的時間，不使用真實時刻表。Blender 模組在 `blender/hsr.blend`，以 `blender/build_hsr.py` 可重建。
