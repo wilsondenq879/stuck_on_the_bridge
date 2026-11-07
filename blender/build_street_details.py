@@ -134,6 +134,7 @@ for side in [-1,1]:
  beam(a,mid+side*2.1,0,13,mid+side*13,0,9.35,.08,'a5aaab')
  block(a,mid+side*7.3,0,7.2,14.4,.65,2.15,'bbbdb8')
  label(a,mid+side*7.3,-.36,8.27,10,'薪 築 瞌 學 圓 區','263e59')
+ reverse_face=frame(*at(a,mid+side*7.3,.42),-a[2],-a[3]);label(reverse_face,0,0,8.27,10,'薪 築 瞌 學 圓 區','263e59')
 zone='campus';court=g['court']
 def strip(path,left,right,raise_y,c):
  pairs=[]
