@@ -1,8 +1,8 @@
-import {makeRestaurants} from './restaurant-world.js?v=0.9.1';
-import {restaurantActors,alignInterchange} from './restaurant-queues.js?v=0.9.1';
-import {makeBusParts} from './bus-world.js?v=0.9.1';
+import {makeRestaurants} from './restaurant-world.js?v=0.9.2';
+import {visibleRestaurantActors,alignInterchange} from './restaurant-queues.js?v=0.9.2';
+import {makeBusParts} from './bus-world.js?v=0.9.2';
 import {drawText} from './game-text.js?v=0.8.2-puns';
-import {onGuanxin} from './guanxin-world.js?v=0.9.1';
+import {onGuanxin} from './guanxin-world.js?v=0.9.2';
 import * as THREE from './vendor/three.module.js';
 import {Route,clamp,lerp,seeded,steeredYaw} from './geo.js?v=0.8.0';
 import {buildInterchange,interchangeRoads} from './interchange.js';
@@ -10,7 +10,7 @@ import {alignmentAt,appendRibbon,bikeBranches,ribbonRuns,roadFrames,routeFrames,
 import {WEATHER,earthquakeAt,geographicPoint,intrudesRoad,rectangleFootprint} from './environment.js';
 import {EnvironmentWorld} from './environment-world.js?v=0.8.2-puns';
 import {isErchong,streetDistrict,mappedBuildingStyle} from './neighborhood.js';
-import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.1';
+import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.2';
 import {makeErchongStreets,makeCommunityExit} from './neighborhood-world.js?v=0.8.2-puns';
 
 const COLORS=[0xd7d9d7,0x384f56,0x8b969b,0x202d35,0xb3aa91,0x7c4c43,0xe0e3dc];
@@ -352,7 +352,7 @@ export class DrivingWorld {
  const visible=challenge?[]:sim.cars.filter(c=>Math.abs(c.s-player.s)<570 && !(chase&&c.s<player.s&&c.s>player.s-15));
  visible.sort((a,b)=>Math.abs(a.s-player.s)-Math.abs(b.s-player.s));
  const opposing=[];
- const restaurantCars=challenge?[]:restaurantActors(sim).filter(c=>Math.hypot(c.world.x-p.x,c.world.z-p.z)<570);
+ const restaurantCars=challenge?[]:visibleRestaurantActors(sim,p,chase);
  for(let i=0;i<45;i++){
    const s=(i*109-sim.time*10+this.route.length*100)%this.route.length;
    if(!challenge&&Math.abs(s-player.s)<450&&!restaurantCars.some(c=>{const a=this.opposingAt(s);return Math.hypot(a.x-c.world.x,a.z-c.world.z)<8;}))opposing.push({s,world:this.opposingAt(s),color:i%7,reverse:true,braking:false,kind:'car'});
