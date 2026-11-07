@@ -1,3 +1,4 @@
+import {liftHill} from '../dist/corridor-tiles.js';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 import * as THREE from '../dist/vendor/three.module.js';import {GLTFLoader} from '../dist/vendor/GLTFLoader.js';
 import {prepareBlenderAssets,prepareVehicleAsset,BlenderTrafficBatch,BlenderVehicleBatch,CAR_MODELS} from '../dist/blender-assets.js';import {Route} from '../dist/geo.js';
@@ -25,7 +26,7 @@ test('both mapped restaurants retain the Blender double-arch pylon in their rout
 test('Blender road tiles cover the mapped car and scooter paths without elevation gaps',async()=>{
  const index=read('routes/index.json');for(const entry of index.routes){const data=read('routes/'+entry.file),manifest=JSON.parse(fs.readFileSync(new URL('../dist/assets/world/'+entry.id+'.json',import.meta.url))),archive=fs.readFileSync(new URL('../dist/assets/world/'+entry.id+'.bin',import.meta.url));
   assert.equal(manifest.id,entry.id);assert.equal(manifest.byteLength,archive.length);const scene=new THREE.Scene();
-  for(const tile of manifest.roads.tiles){const gltf=await parse(archive.subarray(tile.offset,tile.offset+tile.length));scene.add(gltf.scene);}
+  for(const tile of manifest.roads.tiles){const gltf=await parse(archive.subarray(tile.offset,tile.offset+tile.length));liftHill(gltf.scene);scene.add(gltf.scene);}
   scene.updateMatrixWorld(true);
   for(const [points,length] of [[data.points,data.lengthMeters],[data.bikePoints,data.bikeLengthMeters]]){const route=new Route({...data,points,lengthMeters:length});for(let s=35;s<route.length-35;s+=235){const p=route.sample(s),ray=new THREE.Raycaster(new THREE.Vector3(p.x,p.y+2,p.z),new THREE.Vector3(0,-1,0),0,3.5);assert.ok(ray.intersectObject(scene,true).length,`${entry.id} missing pavement near ${s} (${points===data.bikePoints?'bike':'car'})`);}}
  }

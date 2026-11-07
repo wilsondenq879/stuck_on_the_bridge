@@ -1,3 +1,4 @@
+import {hillHeight} from './corridor.js';
 export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export const lerp = (a,b,t) => a+(b-a)*t;
 // Positive steering/offset means the driver's right. Three.js positive yaw is left.
@@ -23,7 +24,9 @@ export class Route {
     while(r-l>1){let m=(l+r)>>1;if(ps[m].s>s)r=m;else l=m;}
     const a=ps[l],b=ps[r],t=clamp((s-a.s)/(b.s-a.s||1),0,1);
     let tx=b.x-a.x,tz=b.z-a.z,dist=Math.hypot(tx,tz)||1;tx/=dist;tz/=dist;
-    return {x:lerp(a.x,b.x,t)-tz*offset,z:lerp(a.z,b.z,t)+tx*offset,y:this.height(s),pitch:Math.atan2(this.height(s+4)-this.height(s-4),8),tx,tz,rx:-tz,rz:tx,yaw:Math.atan2(-tx,-tz),road:a.road||'通勤路線',bridge:!!a.bridge,s};
+    const x=lerp(a.x,b.x,t)-tz*offset,z=lerp(a.z,b.z,t)+tx*offset;
+    const rise=this.height(s+4)-this.height(s-4)+hillHeight(x+tx*4,z+tz*4)-hillHeight(x-tx*4,z-tz*4);
+    return {x,z,y:this.height(s)+hillHeight(x,z),pitch:Math.atan2(rise,8),tx,tz,rx:-tz,rz:tx,yaw:Math.atan2(-tx,-tz),road:a.road||'通勤路線',bridge:!!a.bridge,s};
   }
   height(s){
     for(const span of this.spans) if(s>span.from && s<span.to){

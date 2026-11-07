@@ -1,12 +1,12 @@
 import {safeRoadStart} from './quick-start.js?v=0.9.3';
 import {loadBlenderAssets,loadBlenderChapter} from './blender-assets.js?v=0.9.7';
-import {BlenderRoads} from './blender-roads.js?v=0.9.7';
-import {BlenderScenery} from './blender-scenery.js?v=0.9.7';
+import {BlenderRoads} from './blender-roads.js?v=0.9.8';
+import {BlenderScenery} from './blender-scenery.js?v=0.9.8';
 import {WorldArchive} from './world-archive.js?v=0.9.7';
 import {drawText,installGameText} from './game-text.js?v=0.8.2-puns';
-import {Route,clamp,lerp} from './geo.js?v=0.8.0';
-import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.3';
-import {DrivingWorld} from './world.js?v=0.9.7';
+import {Route,clamp,lerp} from './geo.js?v=0.9.8';
+import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.8';
+import {DrivingWorld} from './world.js?v=0.9.8';
 import {rollDay,dayLabels,LocalChallenge} from './day.js?v=0.8.0';
 import {readGamepad,mergeControls} from './controls.js';
 import {WEATHER,earthquakeAt} from './environment.js';
@@ -53,7 +53,7 @@ function choice(){for(const btn of document.querySelectorAll('[data-vehicle]')){
 function applyCarModel(){if(world)world.carModel=$('carBrand').value+'_'+$('carBody').value;}
 for(const id of ['carBrand','carBody'])$(id).addEventListener('change',applyCarModel);
 function vehicleRouteNote(){
- return vehicle==='bus'?'大型交通車：關新路經國道一號、國道三號抵達糠橋校外接送點，煞停完成任務。':data?.direction==='return'?'回程從園區出發，經康橋、明湖路回關新路。':vehicle==='bike'?'白牌機車沿平面道路經康橋。':'去程行經國道一號、國道三號與茄苳交流道，經康橋再進園區。';
+ return vehicle==='bus'?'大型交通車：關新路經國道一號、國道三號抵達糠橋水滴廣場，繞出後完成任務。':data?.direction==='return'?'回程從園區出發，經康橋、明湖路回關新路。':vehicle==='bike'?'白牌機車沿平面道路經康橋。':'去程行經國道一號、國道三號與茄苳交流道，經康橋再進園區。';
 }
 document.querySelectorAll('[data-vehicle]').forEach(b=>b.addEventListener('click',async()=>{
  vehicle=b.dataset.vehicle;choice();const bus=vehicle==='bus';
@@ -75,7 +75,8 @@ $('start').addEventListener('click',async()=>{
   day=rollDay(freshSeed(),route);scenario=day.scenario;
   const choice=$('startPoint').value;const erchong=data.originLabel?.startsWith('二重埔');let startS=choice==='bridge'?(data.landmarks.find(x=>x.kind==='bridge')?.s||705)+20:choice==='city'?(erchong?(data.landmarks.find(x=>x.name==='關東橋')?.s||3000):(data.eventRegions?.urbanStartS||2476))+15:choice==='shops'?(data.retailLandmarks?.[0]?.s||3032)-180:choice==='park'?(data.elevatedRanges?.[0]?.startS||data.eventRegions?.parkEntryS||3779)-60:choice==='arrival'?Math.max(0,data.lengthMeters-650):0;
   if(choice==='guanxinPark'){const path=vehicle==='bike'?sim?.bikeRoute:route,area=data.landscapeAreas?.find(a=>a.osmId===134204596);if(area){const center=area.points.reduce((p,q)=>({x:p.x+q.x/area.points.length,z:p.z+q.z/area.points.length}),{x:0,z:0});startS=Math.max(0,path.nearest(center.x,center.z).s-18);}}
-  if(choice==='guanxinGuangfu'){const path=vehicle==='bike'?sim?.bikeRoute:route;startS=Math.max(0,path.nearest(-803.63,3585.74).s-20);}
+  if(choice==='guanxinGuangfu'){const path=vehicle==='bike'?sim?.bikeRoute:route;startS=Math.max(0,path.nearest(-810.72,3767.13).s-48);}
+  if(choice==='jieshou'){const path=vehicle==='bike'?sim.bikeRoute:route;startS=Math.max(0,path.nearest(-499.45,3909.19).s-22);}
   if(choice==='restaurant'){const shop=data.restaurants?.[0];if(shop)startS=safeRoadStart(Math.max(0,(vehicle==='bike'?shop.bikeS:shop.s)-65),vehicle==='bike'?data.bikeIntersections:data.intersections,VEHICLES[vehicle].length);}
   const quick=data.quickStarts?.find(q=>q.value===choice);if(quick)startS=vehicle==='bike'?(quick.bikeS??quick.s):quick.s;
   sim=new TrafficSimulation(route,{vehicle,scenario,startS,day,seed:day.seed,warmupSteps:mobilePerformance?360:2400});sim.startS=startS;
@@ -152,26 +153,27 @@ $('rageBtn').addEventListener('click',()=>{audio.setVoice(!audio.voice);$('rageB
 function drawMap(){
  if(!sim||!world||(compactMedia.matches&&running&&!$('trafficDialog').open))return;const canvas=$('map'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);
  if(challenge){ctx.fillStyle='#244944';ctx.fillRect(w*.4,30,w*.2,h-60);ctx.setLineDash([8,9]);ctx.strokeStyle='#b7c3a1';ctx.beginPath();ctx.moveTo(w/2,30);ctx.lineTo(w/2,h-30);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#f0dba0';ctx.beginPath();ctx.arc(w/2+challenge.player.offset*10,h-30-(h-60)*challenge.player.s/challenge.length,8,0,Math.PI*2);ctx.fill();ctx.font='20px sans-serif';ctx.fillStyle='#dce5cc';drawText(ctx,'獨立虛構序章',18,30);ctx.font='16px sans-serif';drawText(ctx,'完成後接回所選通勤路線',18,h-10);return;}
- const path=vehicle==='bike'?world.bikeRoute:route,p=path.sample(sim.player.s,sim.player.offset),points=vehicle==='bus'?path.points.filter(p=>p.s<=sim.tripEndS):path.points;
+ const path=vehicle==='bike'?world.bikeRoute:route,p=sim.player.world||path.sample(sim.player.s,sim.player.offset),points=vehicle==='bus'?path.points.filter(p=>p.s<=sim.tripEndS):path.points;
  const xs=points.map(p=>p.x),zs=points.map(p=>p.z);let minX=Math.min(...xs)-140,maxX=Math.max(...xs)+140,minZ=Math.min(...zs)-120,maxZ=Math.max(...zs)+120;
  if(mapNear){minX=p.x-450;maxX=p.x+450;minZ=p.z-460;maxZ=p.z+340;}
  const scale=Math.min((w-40)/(maxX-minX),(h-26)/(maxZ-minZ)),cx=w/2-(minX+maxX)/2*scale,cy=h/2-(minZ+maxZ)/2*scale,project=p=>[cx+p.x*scale,cy+p.z*scale];
  const line=(ps,color,width)=>{ctx.beginPath();ps.forEach((q,i)=>i?ctx.lineTo(...project(q)):ctx.moveTo(...project(q)));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();};
  for(const water of data.waterAreas||[]){ctx.beginPath();water.points.forEach((q,i)=>i?ctx.lineTo(...project(q)):ctx.moveTo(...project(q)));ctx.fillStyle='#325d61';ctx.fill();}
  for(const road of data.surroundingRoads||[])line(road.points,'#42605d',mapNear?2:1);
+ if(sim.court&&vehicle!=='bike')line(sim.court.points,'#d5b873',3);
  line(points,'#849d8b',5);line(points.filter(v=>v.s<=sim.player.s),'#d8d4a0',5);
- for(const car of sim.cars){if(car.speed>2)continue;const q=(car.kind==='bike'?world.bikeRoute:route).sample(car.s,car.offset),[x,y]=project(q);ctx.fillStyle=scenario==='incident'?'#e4aa71':'#d2b789';ctx.fillRect(x-1.7,y-1.7,3.4,3.4);}
+ for(const car of sim.cars){if(car.speed>2)continue;const q=car.world||(car.kind==='bike'?world.bikeRoute:route).sample(car.s,car.offset),[x,y]=project(q);ctx.fillStyle=scenario==='incident'?'#e4aa71':'#d2b789';ctx.fillRect(x-1.7,y-1.7,3.4,3.4);}
  ctx.font='17px "PingFang TC",sans-serif';ctx.fillStyle='#d5e2d1';if(!mapNear)for(const m of data.landmarks.filter(m=>vehicle!=='bus'||m.s<=sim.tripEndS+10).filter((m,i,a)=>i===0||i===a.length-1||(m.s-a[i-1].s>850))){const[x,y]=project(route.sample(m.s));drawText(ctx,m.kind==='start'?(data.originLabel?.startsWith('二重埔')?'二重埔':'竹北'):m.kind==='finish'?(data.destinationLabel?.includes('聯發科')?'聯發科':'台積12A'):m.name,x+12,clamp(y+4,19,h-9));}
  const[x,y]=project(p);ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(p.tz,p.tx)+Math.PI/2);ctx.fillStyle='#f3eed0';ctx.strokeStyle='#193438';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-11);ctx.lineTo(7,8);ctx.lineTo(0,4);ctx.lineTo(-7,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();ctx.font='15px sans-serif';ctx.fillStyle='#9ab7aa';drawText(ctx,'N ↑',w-45,22);
 }
 
 function updateHUD(){
  const p=currentPlayer(),m=sim.metrics(),localRoute=vehicle==='bike'?world.bikeRoute:route,current=localRoute.sample(sim.player.s);
- const name=challenge?(challenge.kind==='garage'?(p.s<60?'二重埔・社區地下室':p.s<125?'二重埔・集合住宅社區':'二重埔・透天街廓'):'喜來登周邊・天坑支線'):current.road;
+ const name=challenge?(challenge.kind==='garage'?(p.s<60?'二重埔・社區地下室':p.s<125?'二重埔・集合住宅社區':'二重埔・透天街廓'):'喜來登周邊・天坑支線'):p.courtDistance!=null?(p.unloaded?'水滴廣場・出口':'水滴廣場・接送'):current.road;
  $('weatherLine').textContent=earthquakeAt(day,sim.totalTime)>0?'地震事件 · 握穩、減速':WEATHER[day?.weather||'sunny'].name+(day?.weather==='typhoon'?' · 強側風 / 濕滑路面':day?.weather==='rain'?' · 雨刷自動 / 煞車距離加長':' · 真實地形遠山');$('rearWarning').hidden=!!subtitleUntil||!(sim.rearPressureUntil>sim.totalTime);$('roadLabel').textContent=name;$('segment').textContent=name;$('speed').textContent=Math.round(Math.abs(p.speed)*3.6);
  $('travelled').textContent=((sim.player.s-(sim.startS||0))/1000).toFixed(2);$('waiting').textContent=duration(sim.player.wait);
  const end=vehicle==='bus'?sim.tripEndS:localRoute.length;
- $('distance').textContent=challenge?Math.max(0,Math.round(challenge.length-p.s))+' m':((end-p.s)/1000).toFixed(2)+' km';
+ $('distance').textContent=challenge?Math.max(0,Math.round(challenge.length-p.s))+' m':((p.courtDistance!=null?sim.court.length-p.courtDistance:Math.max(0,end-p.s))/1000).toFixed(2)+' km';
  $('autoState').textContent=(p.auto?'輔助跟車 開':'手動油門')+(timeScale>1?` · ${timeScale}×`:'');$('progressFill').style.width=(challenge?p.s/challenge.length:sim.player.s/end)*100+'%';
  const minutes=(data.direction==='return'?16*60+40:7*60+45)+(sim.totalTime+(challenge?.time||day?.chapterTime||0))/60;$('clock').textContent=`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(Math.floor(minutes%60)).padStart(2,'0')}`;
  $('dayBadge').textContent=`⚄ ${day?.dice.join(' · ')||''}　扣分 ${day?.points||0}`;
@@ -227,17 +229,17 @@ async function loadRoute(id){
  if(token!==routeLoadToken)return;
  if(mobilePerformance&&world){world.dispose();world=null;}
  const assets=await loadBlenderAssets(),nextRoute=new Route(next),initial=nextRoute.sample(entry.originKey==='zhubei'?760:280);let roads,scenery;
- try{const archive=await WorldArchive.create(id);roads=await BlenderRoads.create(archive);scenery=await BlenderScenery.create(archive,roads.texture);await Promise.all([roads.ensureNear(initial.x,initial.z),scenery.ensureNear(initial.x,initial.z)]);}catch(e){scenery?.dispose();roads?.dispose();throw e;}if(token!==routeLoadToken){scenery.dispose();roads.dispose();return;}
+ try{const archive=await WorldArchive.create(id);roads=await BlenderRoads.create(archive,nextRoute);scenery=await BlenderScenery.create(archive,roads.texture);await Promise.all([roads.ensureNear(initial.x,initial.z),scenery.ensureNear(initial.x,initial.z)]);}catch(e){scenery?.dispose();roads?.dispose();throw e;}if(token!==routeLoadToken){scenery.dispose();roads.dispose();return;}
  world?.dispose();data=next;routeId=id;route=nextRoute;sim=new TrafficSimulation(route,{vehicle,startS:entry.originKey==='zhubei'?760:280,warmupSteps:mobilePerformance?360:2400});world=new DrivingWorld($('scene'),route,sim.signals,terrainData,data.sceneryProfile==='south-hsinchu'?null:overpassData,assets,roads,scenery);applyCarModel();world.makeCockpit(vehicle);
  $('originChoice').value=entry.originKey;$('destinationChoice').value=entry.destinationKey;
  $('directionRow').hidden=vehicle==='bus'||entry.originKey!=='guanxin';$('destinationChoice').closest('label').hidden=vehicle==='bus';$('tripDirection').value=entry.direction??'outbound';
  $('routeVehicleNote').hidden=entry.originKey!=='guanxin';$('routeVehicleNote').textContent=vehicleRouteNote();
  const options=[['0',data.sceneryProfile==='south-hsinchu'?(data.direction==='return'?'完整回程 · 經康橋、明湖路':'完整去程 · 經康橋再進園區'):'完整通勤 · 含隨機序章']];if(entry.originKey==='zhubei')options.push(['bridge','經國大橋 · 略過序章'],['city','慈雲路 · 略過序章'],['shops','Costco／迪卡儂 · 略過序章']);else if(entry.originKey==='erchong')options.push(['city','關東橋／光復路 · 略過序章']);options.push(['park','園區入口 · 略過序章'],['arrival','公司前 650 m · 略過序章']);
- if(data.quickStarts)options.splice(1,options.length-1,...data.quickStarts.filter(q=>vehicle!=='bus'||q.s<data.schoolStop.s).map(q=>[q.value,q.label]));if(entry.originKey==='guanxin'){options.splice(1,0,['guanxinPark','關新公園・遊戲場旁']);if(data.direction!=='return')options.splice(1,0,['guanxinGuangfu','關新路・往光復路']);}if(data.restaurants?.length)options.splice(1,0,['restaurant','麥當勞・得來速車龍旁']);if(vehicle==='bus')options[0][1]='完整交通車任務・關新路 → 糠橋';
+ if(data.quickStarts)options.splice(1,options.length-1,...data.quickStarts.filter(q=>vehicle!=='bus'||q.s<data.schoolStop.s).map(q=>[q.value,q.label]));if(entry.originKey==='guanxin'){options.splice(1,0,['guanxinPark','關新公園・遊戲場旁']);if(data.direction!=='return')options.splice(1,0,['yiji','壹集・關薪路社區旁'],['guanxinGuangfu','關新路・往光復路'],['jieshou','介壽路・園區入口牌樓']);}if(data.restaurants?.length)options.splice(1,0,['restaurant','麥當勞・得來速車龍旁']);if(vehicle==='bus')options[0][1]='完整交通車任務・關新路 → 糠橋';
  $('startPoint').replaceChildren(...options.map(([value,label])=>{const o=document.createElement('option');o.value=value;o.textContent=label;return o;}));
- $('routeSummary').textContent=vehicle==='bus'?'關新路 → 國道一號・國道三號 → 糠橋校外接送點':entry.originKey==='guanxin'?(data.direction==='return'?data.originLabel+' → 康橋 → 明湖路 → 關新路':'關新路 → '+(vehicle==='bike'?'寶山平面道路':'國道一號・國道三號')+' → 康橋 → '+data.destinationLabel):data.routeSummary||entry.routeSummary||(entry.originKey==='zhubei'?'經國大橋 → 慈雲路':'中興路四段 → 光復路')+' → '+entry.destinationLabel;
+ $('routeSummary').textContent=vehicle==='bus'?'關新路 → 國道一號・國道三號 → 糠橋水滴廣場':entry.originKey==='guanxin'?(data.direction==='return'?data.originLabel+' → 康橋 → 明湖路 → 關新路':'關新路 → '+(vehicle==='bike'?'寶山平面道路':'國道一號・國道三號')+' → 康橋 → '+data.destinationLabel):data.routeSummary||entry.routeSummary||(entry.originKey==='zhubei'?'經國大橋 → 慈雲路':'中興路四段 → 光復路')+' → '+entry.destinationLabel;
  $('routeDescription').textContent=data.originLabel+' → '+data.landmarks.filter(x=>x.s>0&&x.s<data.lengthMeters-50).map(x=>x.name).join(' → ')+' → '+data.destinationLabel+'。汽車 '+(data.lengthMeters/1000).toFixed(2)+' km；機車 '+(data.bikeLengthMeters/1000).toFixed(2)+' km。';
- $('routeDestination').textContent=vehicle==='bus'?'大型交通車沿汽車道路行駛，在柴橋路校外接送點煞停完成任務；未駛入校內道路。':data.sceneryProfile==='south-hsinchu'?(data.direction==='return'?'經康橋校外接送點、明湖路回關新路。':'經康橋校外接送點後，前往'+data.destinationLabel+'。'):data.destination.address+'；終點位於廠區外的公共道路接入點，非警衛門實測。'+(entry.destinationKey==='tsmc'?'12廠選用12A／總部。':'');
+ $('routeDestination').textContent=vehicle==='bus'?'駛入水滴廣場停靠兩秒，繞回柴喬路完成接送。':data.sceneryProfile==='south-hsinchu'?(data.direction==='return'?'經康橋校外接送點、明湖路回關新路。':'經康橋校外接送點後，前往'+data.destinationLabel+'。'):data.destination.address+'；終點位於廠區外的公共道路接入點，非警衛門實測。'+(entry.destinationKey==='tsmc'?'12廠選用12A／總部。':'');
  $('start').disabled=false;$('start').firstElementChild.textContent='擲骰，發動今天';ready=true;last=performance.now();
 }
 function selectedRoute(){

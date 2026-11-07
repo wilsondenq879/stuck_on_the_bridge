@@ -1,5 +1,6 @@
+import {courtPoints,courtStop} from './corridor.js';
 import {RestaurantQueue,restaurantActors} from './restaurant-queues.js?v=0.9.3';
-import {Route,clamp,lerp,seeded} from './geo.js?v=0.8.0';
+import {Route,clamp,lerp,seeded} from './geo.js?v=0.9.8';
 import {recordViolation} from './day.js';
 import {WEATHER,earthquakeAt,windAt} from './environment.js';
 
@@ -40,6 +41,8 @@ export class TrafficSimulation {
       if(day.bridgeSignal)this.signals.push({name:'經國大橋入口・短綠長紅挑戰',s:day.bridgeSignalS??660,cycle:77,green:19,offset:60,fictional:true});
       this.signals.sort((a,b)=>a.s-b.s);
     }
+    this.court=route.data.schoolStop&&route.data.direction==='outbound'?new Route({points:courtPoints}):null;
+    this.courtExit=this.court?route.data.schoolStop.s+28:0;
     this.schoolQueue=null;
     if(route.data.schoolStop)this.initSchoolQueue(startS);
     // Keep vehicle-specific light positions when the car crosses the viaduct.
@@ -103,18 +106,18 @@ export class TrafficSimulation {
     const p=this.player;if(includePlayer&&Math.abs(this.longitudinalGap(s,'car',p))<(length+VEHICLES[p.vehicle].length)/2+3&&Math.abs(p.offset-offset)<2.6)return;
     const c=this.addCar(s,lane,kind,0);c.length=length;c.schoolQueue=true;c.v0=4.5;c.schoolGate=q.gate;
   }
-  rebuildBuckets(){this.buckets=new Map();for(const c of [...this.cars,...restaurantActors(this)]){c.station=this.sharedStation(c.s,c.kind);const k=Math.floor(c.station/25);if(!this.buckets.has(k))this.buckets.set(k,[]);this.buckets.get(k).push(c);}}
+  rebuildBuckets(){this.buckets=new Map();for(const c of [...this.cars,...restaurantActors(this)]){if(c.schoolTurningAt!==undefined)continue;c.station=this.sharedStation(c.s,c.kind);const k=Math.floor(c.station/25);if(!this.buckets.has(k))this.buckets.set(k,[]);this.buckets.get(k).push(c);}}
   nearby(s,behind=15,ahead=15,kind=this.player?.vehicle||'car'){if(!this.buckets)return this.cars;s=this.sharedStation(s,kind);const found=[];for(let k=Math.floor((s-behind-30)/25);k<=Math.floor((s+ahead+30)/25);k++){const b=this.buckets.get(k);if(b)found.push(...b);}return found;}
   phase(signal){const t=(this.time+signal.offset)%signal.cycle;
     const blocked=(this.scenario==='incident'&&this.sideQueue>15&&Math.abs(signal.s-this.feedS)<100&&t<Math.min(14,this.sideQueue*.3))||(signal.yellowBox&&Math.abs(signal.s-this.feedS)<130&&t<12);
     return {state:blocked?'blocked':t<signal.green?'green':t<signal.green+3?'yellow':'red',remaining:Math.ceil(t<signal.green?signal.green-t:signal.cycle-t),blocked};
   }
-  stopAt(s,kind=this.player?.vehicle||'car'){if(kind==='bus'&&this.player?.vehicle==='bus'&&Math.abs(s-this.player.s)<.02&&this.tripEndS<this.route.length&&this.tripEndS-s<90)return {gap:Math.max(0,this.tripEndS-s)+VEHICLES.bus.length/2,signal:{name:'交通車接送停靠',s:this.tripEndS},phase:{state:'red',remaining:0}};for(const signal of kind===this.player?.vehicle?this.signals:((kind==='bike'?this.bikeSignals:this.carSignals)||this.signals)){let gap=signal.s-8-s;if(gap>0&&gap<150){const p=this.phase(signal);if(p.state!=='green')return{gap,signal,phase:p};}}return null;}
+  stopAt(s,kind=this.player?.vehicle||'car'){if(!this.court&&kind==='bus'&&this.player?.vehicle==='bus'&&Math.abs(s-this.player.s)<.02&&this.tripEndS<this.route.length&&this.tripEndS-s<90)return {gap:Math.max(0,this.tripEndS-s)+VEHICLES.bus.length/2,signal:{name:'交通車接送停靠',s:this.tripEndS},phase:{state:'red',remaining:0}};for(const signal of kind===this.player?.vehicle?this.signals:((kind==='bike'?this.bikeSignals:this.carSignals)||this.signals)){let gap=signal.s-8-s;if(gap>0&&gap<150){const p=this.phase(signal);if(p.state!=='green')return{gap,signal,phase:p};}}return null;}
   sharedStation(s,kind){if(kind!=='bike')return s;const r=this.stationRanges.find(v=>s>=v.bikeStartS&&s<=v.bikeEndS);return r?r.carStartS+(s-r.bikeStartS)*(r.carEndS-r.carStartS)/(r.bikeEndS-r.bikeStartS||1):s;}
   longitudinalGap(s,kind,c){const other=c.kind||c.vehicle;return kind===other?c.s-s:this.sharedStation(c.s,other)-this.sharedStation(s,kind);}
   isSeparate(a,kind,b,other){kind=kind==='bike'?'bike':'car';other=other==='bike'?'bike':'car';if(kind===other)return false;const ranges=this.route.data.bikeDivergenceRanges;if(!ranges)return a>this.bikeSplit&&b>this.bikeSplit;return ranges.some(r=>{const car=kind==='car'?a:b,bike=kind==='bike'?a:b;return(car>=r.carStartS&&car<=r.carEndS)||(bike>=r.bikeStartS&&bike<=r.bikeEndS);});}
   closest(s,offset,width,excludeId=null,includePlayer=true){let best=null;const kind=width<1?'bike':'car',station=this.sharedStation(s,kind);for(const c of this.nearby(s,40,180,kind)){if(c.leavingRoute||c.id===excludeId||this.isSeparate(s,kind,c.s,c.kind))continue;const gap=kind===c.kind?c.s-s:(c.station??this.sharedStation(c.s,c.kind))-station;if(gap<=0||gap>140)continue;const candidateS=c.kind===kind?c.s:s+gap;if(Math.abs(c.offset-offset)<(c.width+width)/2+.25&&(!best||candidateS<best.s))best=c.kind===kind?c:{...c,s:candidateS};}
-    const p=this.player;if(includePlayer&&p&&!p.done&&!this.isSeparate(s,kind,p.s,p.vehicle)){const gap=this.longitudinalGap(s,kind,p);if(gap>0&&gap<140&&Math.abs(p.offset-offset)<(VEHICLES[p.vehicle].width+width)/2+.25&&(!best||s+gap<best.s))best={...p,s:s+gap,length:VEHICLES[p.vehicle].length,width:VEHICLES[p.vehicle].width,id:-1};}return best;}
+    const p=this.player;if(includePlayer&&p&&p.courtDistance==null&&!p.done&&!this.isSeparate(s,kind,p.s,p.vehicle)){const gap=this.longitudinalGap(s,kind,p);if(gap>0&&gap<140&&Math.abs(p.offset-offset)<(VEHICLES[p.vehicle].width+width)/2+.25&&(!best||s+gap<best.s))best={...p,s:s+gap,length:VEHICLES[p.vehicle].length,width:VEHICLES[p.vehicle].width,id:-1};}return best;}
 
   incidentState(){if(this.scenario!=='incident')return{label:'一般早尖峰',stage:'normal',capacity:1.55};if(this.time<360)return{label:'國1南下事故處理中',stage:'active',capacity:.35};if(this.time<540)return{label:'事故排除，車流恢復中',stage:'recovering',capacity:lerp(.35,1.55,(this.time-360)/180)};return{label:'國道恢復通行，市區仍在消化車流',stage:'cleared',capacity:1.55};}
   stepTraffic(dt,includePlayer=true){
@@ -143,8 +146,15 @@ export class TrafficSimulation {
     }
     this.cars.sort((a,b)=>b.s-a.s);
     for(const c of this.cars){
-      if(c.schoolTurningAt!==undefined){c.speed=1.2;c.braking=false;c.offset+=dt*.9;continue;}
-      if(c.schoolQueue&&c.s>=c.schoolGate-17.3){c.schoolServiceUntil??=this.time+this.schoolQueue.releaseEvery;if(this.time<c.schoolServiceUntil){c.speed=0;c.braking=true;continue;}c.schoolTurningAt=this.time;this.schoolQueue.served++;continue;}
+      if(c.schoolTurningAt!==undefined){
+        c.courtDistance+=this.court?this.courtAdvance(c,dt):0;
+        if(this.court){
+          const approach=c.courtDistance<0;
+          c.world=approach?this.route.sample(this.schoolQueue.gate-7+c.courtDistance,c.offset):this.court.sample(c.courtDistance);
+        }
+        continue;
+      }
+      if(c.schoolQueue&&c.s>=c.schoolGate-17.3){c.schoolServiceUntil??=this.time+this.schoolQueue.releaseEvery;if(this.time<c.schoolServiceUntil){c.speed=0;c.braking=true;continue;}c.schoolTurningAt=this.time;c.courtDistance=Math.min(0,c.s-(this.schoolQueue.gate-7));this.schoolQueue.served++;continue;}
       if(c.parkedUntil>this.time){c.speed=0;c.braking=true;c.clearAhead=false;c.hasQueueAhead=false;continue;}const localRoute=c.kind==='bike'?this.bikeRoute:this.route;const nowN=localRoute.lanes(c.s),lookahead=c.kind==='bus'?80:45,neck=localRoute.narrowings.find(n=>n.s>c.s&&n.s-c.s<lookahead),futureN=Math.min(nowN,localRoute.lanes(Math.min(localRoute.length,c.s+lookahead)),neck?.lanes??3);if(nowN>c.knownLanes)c.lane=c.id%nowN;c.knownLanes=nowN;c.lane=Math.min(c.lane,futureN-1);let target=(c.lane-(futureN-1)/2)*3.35;
       if(c.kind==='bike')target+=.65;
       const stoppedAhead=this.closest(c.s+.01,c.offset,c.width,c.id,includePlayer);
@@ -172,7 +182,7 @@ export class TrafficSimulation {
         c.nextRouteExit=this.routeExits.find(x=>x>exit+20);
         if(!follow){const position=localRoute.sample(c.s,c.offset),heading=localRoute.sample(Math.max(0,exit-18));
           const mainlinePath=this.mainlinePath(exit),match=mainlinePath?.nearest(position.x,position.z);
-          this.mainlineDepartures.push({...c,mainlinePath,mainlineS:match?.s??0,mainlineOffset:match?.offset??0,age:0,origin:position,tx:heading.tx,tz:heading.tz,yaw:heading.yaw,speed:Math.max(9,c.speed)});c.leavingRoute=true;
+          if(mainlinePath&&match.d<5)this.mainlineDepartures.push({...c,mainlinePath,mainlineS:match?.s??0,mainlineOffset:match?.offset??0,age:0,origin:position,tx:heading.tx,tz:heading.tz,yaw:heading.yaw,speed:Math.max(9,c.speed)});c.leavingRoute=true;
         }
       }
       c.clearAhead=c.kind==='car' && gap>30 && (!lead || lead.speed>5.6 || lead.s-c.s>60)
@@ -180,16 +190,46 @@ export class TrafficSimulation {
         && !quake && this.day?.weather!=='typhoon';
       c.hasQueueAhead=!!lead && lead.id!==-1 && lead.speed<1.5 && lead.s-c.s<22;
     }
-    this.cars=this.cars.filter(c=>{if(c.leavingRoute||(c.schoolTurningAt!==undefined&&this.time-c.schoolTurningAt>3.5)||c.s>(c.kind==='bike'?this.bikeRoute.length:this.route.length)+8){this.exited++;return false;}return true;});
+    this.cars=this.cars.filter(c=>{if(c.leavingRoute||(c.schoolTurningAt!==undefined&&(this.court?c.courtDistance>=this.court.length-.01:this.time-c.schoolTurningAt>1))||c.s>(c.kind==='bike'?this.bikeRoute.length:this.route.length)+8){this.exited++;return false;}return true;});
+  }
+  courtAdvance(c,dt){
+    const traffic=this.cars.filter(v=>v!==c&&v.courtDistance!=null);
+    if(c!==this.player&&this.player.courtDistance!=null)traffic.push(this.player);
+    let gap=Infinity;
+    for(const v of traffic){
+      const distance=v.courtDistance-c.courtDistance;
+      if(distance>0)gap=Math.min(gap,distance-((v.length||VEHICLES[v.vehicle]?.length||5)+(c.length||VEHICLES[c.vehicle]?.length||5))/2-1.5);
+    }
+    return Math.max(0,Math.min(dt*3.5,gap));
+  }
+  driveCourt(dt,gas,brake,steer){
+    const p=this.player;
+    const gap=this.courtAdvance(p,dt),remain=courtStop-p.courtDistance;
+    if(p.auto){gas=1;brake=!p.unloaded&&remain<Math.max(2,p.speed*p.speed/5)?1:0;}
+    p.speed=clamp(p.speed+(gas*2-brake*5-.28)*dt,0,4);
+    p.courtDistance+=Math.min(p.speed*dt,gap, p.unloaded?Infinity:Math.max(0,remain));
+    p.offset=clamp(p.offset+steer*dt,-.55,.55);
+    if(!p.unloaded&&courtStop-p.courtDistance<2.2){
+      p.speed=0;p.dwell=(p.dwell||0)+dt;
+      if(p.dwell>=2)p.unloaded=true;
+    }
+    p.world=this.court.sample(p.courtDistance,p.offset);
+    this.lastMessage=p.unloaded?'接送完成，繞出廣場回柴喬路':'水滴廣場接送，請在彎道前停靠';
+    if(p.courtDistance>=this.court.length-.1){
+      p.courtDistance=null;p.world=null;p.courtComplete=true;p.offset=0;p.s=this.courtExit;
+      if(p.vehicle==='bus'){p.done=true;p.speed=0;}
+    }
   }
   step(dt,input={}){if(this.player.done)return;dt=Math.min(dt,.1);this.totalTime+=dt;this.updateDay();this.stepTraffic(dt);const p=this.player,spec=VEHICLES[p.vehicle],localRoute=p.vehicle==='bike'?this.bikeRoute:this.route;let gas=clamp(Number(input.gas)||0,0,1),brake=clamp(Number(input.brake)||0,0,1),steer=clamp(Number(input.steer)||((input.right?1:0)-(input.left?1:0)),-1,1);
+    if(p.courtDistance!=null){this.driveCourt(dt,gas,brake,steer);return;}
     if(steer)p.lane=clamp(Math.round(p.offset/3.35+(localRoute.lanes(p.s)-1)/2),0,localRoute.lanes(p.s)-1);
     else if(p.auto){const ahead=this.closest(p.s+.01,p.offset,spec.width,null,false);if(ahead?.parkedUntil>this.time&&ahead.s-p.s<60&&localRoute.lanes(p.s)>1){const n=localRoute.lanes(p.s),lane=p.lane===n-1?p.lane-1:p.lane+1,off=localRoute.laneOffset(p.s,lane);if(!this.nearby(p.s,12,15).some(v=>Math.abs(v.offset-off)<2))p.lane=lane;}const lookahead=p.vehicle==='bus'?80:45,neck=localRoute.narrowings.find(n=>n.s>p.s&&n.s-p.s<lookahead),n=Math.min(localRoute.lanes(p.s),localRoute.lanes(p.s+lookahead),neck?.lanes??3);p.lane=Math.min(p.lane,n-1);const desired=(p.lane-(n-1)/2)*3.35+(p.vehicle==='bike'?.55:0);steer=clamp((desired-p.offset)*.4-p.heading*2.5,-1,1);}
     p.steering=lerp(p.steering,steer,Math.min(1,dt*5));p.heading=0;
     let front=this.closest(p.s+.01,p.offset,spec.width,null,false),gap=front?front.s-p.s-(front.length+spec.length)/2:1e5,stop=this.stopAt(p.s);if(p.auto){const box=this.signals.find(l=>l.yellowBox&&l.s-8>p.s&&l.s-p.s<120&&front&&front.s<l.s+25+spec.length&&front.speed<1.8);if(box&&(!stop||box.s-8-p.s<stop.gap))stop={gap:box.s-8-p.s,signal:box};}
     if(p.auto&&!gas&&!brake){const cameraNear=this.day?.cameras.some(c=>c.s-p.s>-5&&c.s-p.s<160);gas=p.speed<(cameraNear?10.4:(p.vehicle!=='bike'&&localRoute.highway(p.s)==='motorway'?25:11.2))?1:0;const distance=Math.min(gap,stop?stop.gap-spec.length/2:1e5);if(distance<Math.max(5,p.speed*p.speed/(7*this.weather.grip)+3)){gas=0;brake=1;}}
     const onMotorway=p.vehicle!=='bike'&&localRoute.highway(p.s)==='motorway',maximum=onMotorway?(p.vehicle==='bus'?22.2:27.8):spec.maxSpeed;
-    const resistance=.25+p.speed*.026;let accel=gas*spec.accel*this.weather.grip-brake*spec.brake*this.weather.grip-resistance;if(p.speed===0&&gas===0)accel=0;p.speed=clamp(p.speed+accel*dt,0,maximum);p.braking=!!brake;
+    const slope=this.court&&p.s>this.schoolQueue.gate-1600&&p.s<this.schoolQueue.gate+530?localRoute.sample(p.s).pitch:0;
+    const resistance=.25+p.speed*.026+9.81*Math.sin(slope);let accel=gas*spec.accel*this.weather.grip-brake*spec.brake*this.weather.grip-resistance;if(p.speed===0&&gas===0)accel=0;p.speed=clamp(p.speed+accel*dt,0,maximum);p.braking=!!brake;
     let newOffset=p.offset+steer*(p.vehicle==='bike'?2.8:p.vehicle==='bus'?1.45:2.25)*dt+windAt(this.day,this.totalTime,p.vehicle)*Math.min(1,p.speed/5)*dt;
     const edge=localRoute.width(p.s+p.speed*dt)/2-spec.width/2-.05;
     if(Math.abs(newOffset)>edge){newOffset=clamp(newOffset,-edge,edge);this.lastMessage='已到路緣，請回正方向';}
@@ -201,6 +241,9 @@ export class TrafficSimulation {
     p.offset=newOffset;front=this.closest(p.s+.01,p.offset,spec.width,null,false);gap=front?front.s-p.s-(front.length+spec.length)/2:1e5;
     let ds=p.speed*Math.cos(p.heading)*dt;const blockedBox=this.signals.find(s=>this.phase(s).blocked&&p.s>s.s&&p.s<s.s+20);if(blockedBox){ds=0;p.speed=0;}if(ds>gap-.25){ds=Math.max(0,gap-.25);if(p.speed>(front?.speed||0)+1.5&&this.totalTime-this.lastBump>3)this.recordContact('追近前車，請提早煞車');p.speed=Math.min(p.speed,front?.speed||0);}
     const oldS=p.s;p.s=Math.min(this.tripEndS,p.s+ds);
+    if(this.court&&p.vehicle!=='bike'&&!p.courtComplete&&oldS<=this.route.data.schoolStop.s-7&&p.s>=this.route.data.schoolStop.s-7){
+      p.courtDistance=0;p.offset=0;p.speed=Math.min(p.speed,3);p.world=this.court.sample(0);return;
+    }
     for(const light of this.signals)if(oldS<light.s-8&&p.s>=light.s-8&&this.phase(light).state==='red'){p.red++;this.lastRed=this.totalTime;this.lastMessage='通過紅燈，請留意號誌';if(this.day&&light.camera){this.lastMessage=recordViolation(this.day,'red','闖紅燈照相',this.totalTime,3);this.flashAt=this.totalTime;}}
     if(this.day){
       for(const cam of this.day.cameras)if(oldS<cam.s&&p.s>=cam.s&&p.speed*3.6>cam.limit){this.lastMessage=recordViolation(this.day,'speed',`測速照相：${Math.round(p.speed*3.6)} / ${cam.limit} km/h`,this.totalTime,2);this.flashAt=this.totalTime;}
@@ -209,7 +252,7 @@ export class TrafficSimulation {
       if(inBox&&this.boxWait>3&&!this.day.seen.has('box'+inBox.s)){this.day.seen.add('box'+inBox.s);this.lastMessage=recordViolation(this.day,'box','黃網線未淨空：路口內停等超過 3 秒',this.totalTime,2);this.flashAt=this.totalTime;}
     }
     this.updateFollowing(dt,front,gap,stop);
-    this.updateRearPressure(dt,input);if(p.speed<.5)p.wait+=dt;if(p.vehicle==='bus'&&this.tripEndS<localRoute.length){if(p.s>=this.tripEndS-8&&p.speed<.5){p.done=true;p.speed=0;}else if(this.tripEndS-p.s<60)this.lastMessage='交通車停靠點：緩慢靠近，煞停後完成接送。';}else if(p.s>=localRoute.length-5){p.done=true;p.speed=0;}
+    this.updateRearPressure(dt,input);if(p.speed<.5)p.wait+=dt;if(p.vehicle==='bus'&&this.tripEndS<localRoute.length){if(!this.court&&p.s>=this.tripEndS-8&&p.speed<.5){p.done=true;p.speed=0;}else if(this.tripEndS-p.s<60)this.lastMessage='交通車停靠點：緩慢靠近，煞停後完成接送。';}else if(p.s>=localRoute.length-5){p.done=true;p.speed=0;}
   }
   recordContact(message){
     this.player.bumps++;

@@ -44,7 +44,7 @@ test('school bus follows car geometry, respects its full size and finishes only 
  sim.player.auto=true;
  for(let i=0;i<5000&&!sim.player.done;i++)sim.step(.1);
  assert.ok(sim.player.done,'bus must clear the queue and reach its school stop');
- assert.equal(sim.player.speed,0);assert.ok(Math.abs(sim.player.s-(d.schoolStop.s-6))<9);
+ assert.equal(sim.player.speed,0);assert.equal(sim.player.courtComplete,true);assert.equal(sim.player.unloaded,true);assert.equal(sim.player.s,sim.courtExit);
  assert.ok(sim.schoolQueue.served>0,'queue must actually drain through the school entrance');
  assert.ok(sim.cars.some(c=>c.kind==='bus'));
 });
