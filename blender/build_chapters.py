@@ -1,0 +1,3 @@
+import bpy,pathlib,sys
+source,out=map(pathlib.Path,sys.argv[sys.argv.index('--')+1:][:2]);assert source.stem in {'garage','sinkhole','sinkhole-safe','bike','bus'} and source.suffix=='.glb';out.mkdir(parents=True,exist_ok=True)
+bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False);bpy.ops.import_scene.gltf(filepath=str(source));bpy.ops.file.pack_all();bpy.ops.wm.save_as_mainfile(filepath=str(out/(source.stem+'.blend')));bpy.ops.export_scene.gltf(filepath=str(out/(source.stem+'.glb')),export_format='GLB',export_apply=True,export_gpu_instances=True,use_mesh_edges=True);print('CHAPTER_EXPORTED',source.stem,flush=True)

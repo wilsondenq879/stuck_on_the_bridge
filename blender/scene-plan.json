@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "models": [
+    {"id":"benz_sedan", "shape":"sedan", "profile":"executive", "width":1.80, "length":4.42, "height":1.45},
+    {"id":"benz_suv", "shape":"suv", "profile":"executive", "width":1.80, "length":4.42, "height":1.67},
+    {"id":"bmw_sedan", "shape":"sedan", "profile":"sport", "width":1.80, "length":4.42, "height":1.43},
+    {"id":"bmw_suv", "shape":"suv", "profile":"sport", "width":1.80, "length":4.42, "height":1.67},
+    {"id":"toyota_sedan", "shape":"sedan", "profile":"family", "width":1.80, "length":4.42, "height":1.45},
+    {"id":"toyota_suv", "shape":"suv", "profile":"family", "width":1.80, "length":4.42, "height":1.67},
+    {"id":"nissan_sedan", "shape":"sedan", "profile":"vshape", "width":1.80, "length":4.42, "height":1.46},
+    {"id":"nissan_suv", "shape":"suv", "profile":"vshape", "width":1.80, "length":4.42, "height":1.66},
+    {"id":"tesla_sedan", "shape":"sedan", "profile":"electric", "width":1.80, "length":4.42, "height":1.42},
+    {"id":"tesla_suv", "shape":"suv", "profile":"electric", "width":1.80, "length":4.42, "height":1.59},
+    {"id":"honda_sedan", "shape":"sedan", "profile":"compact", "width":1.80, "length":4.42, "height":1.44},
+    {"id":"honda_suv", "shape":"suv", "profile":"compact", "width":1.80, "length":4.42, "height":1.64},
+    {"id":"porsche_sedan", "shape":"sedan", "profile":"coupe", "width":1.80, "length":4.42, "height":1.34},
+    {"id":"porsche_suv", "shape":"suv", "profile":"coupe", "width":1.80, "length":4.42, "height":1.58}
+  ],
+  "landmarks":[{"id":"restaurant_arch_pylon","shape":"double_arch","height":9.0}]
+}
