@@ -41,7 +41,7 @@ export class CommuteAudio {
  clipFor(line){
   if(!this.ctx) return Promise.resolve(null);
   if(!this.clips.has(line.id)){
-   const url=new URL('./audio/'+line.id+'.wav?v=0.7.0',import.meta.url);
+   const url=new URL('./audio/'+line.id+'.wav?v=0.9.4',import.meta.url);
    const load=fetch(url).then(async response=>{
     if(!response.ok) throw Error('Voice clip unavailable');
     return this.ctx.decodeAudioData(await response.arrayBuffer());
