@@ -23,6 +23,15 @@ test('Guanxin uses the mapped 23-storey reference tower and keeps curb parking o
   tower.geometry.computeBoundingBox();const box=tower.geometry.boundingBox;
   assert.ok(Math.abs((box.min.x+box.max.x)/2+717.98)<2);
   assert.ok(group.userData.buildingIds.length>15);
+  const blueSea=group.children.find(o=>o.userData.osmWayId===363572242);
+  assert.ok(blueSea,'the building beside Guanxin Road 21 must not disappear');
+  assert.equal(blueSea.userData.height,57.6);
+  assert.ok(blueSea.userData.footprintScale>=.75&&blueSea.userData.footprintScale<=1);
+  assert.ok(group.userData.referenceGridFaces>=4,'the reference building should have its structural grid');
+  assert.ok(group.userData.referenceFrontages>=4,'junction buildings should have street-level shop fronts');
+  assert.ok(group.userData.medianTreeCenters.length>0,'the planted median should include trees');
+  for(const p of group.userData.medianTreeCenters)
+   assert.ok(w.clearance.free(p.x,p.z,.25,0,8),'a median tree trunk intrudes into a driving lane');
   const paint=w.scene.getObjectByName('關新路・路邊停車帶');assert.ok(paint);
   const wheels=group.children.filter(o=>o.name.endsWith('/wheel')||o.name.endsWith('・wheel'));
   assert.ok(wheels.reduce((sum,o)=>sum+o.count,0)>100);
