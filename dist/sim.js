@@ -1,11 +1,11 @@
-import {RestaurantQueue,restaurantActors} from './restaurant-queues.js?v=0.9.2';
+import {RestaurantQueue,restaurantActors} from './restaurant-queues.js?v=0.9.3';
 import {Route,clamp,lerp,seeded} from './geo.js?v=0.8.0';
 import {recordViolation} from './day.js';
 import {WEATHER,earthquakeAt,windAt} from './environment.js';
 
 export const VEHICLES={car:{width:1.82,length:4.45,accel:2.8,brake:7.4,maxSpeed:16.7,steer:0.34,label:'汽車'},bus:{width:2.45,length:9.8,accel:1.5,brake:5.3,maxSpeed:16.7,steer:.25,label:'糠橋交通車'},bike:{width:.76,length:1.95,accel:3.5,brake:6.2,maxSpeed:16.7,steer:.48,label:'機車'}};
 export class TrafficSimulation {
-  constructor(route,{scenario='normal',seed=7301,vehicle='car',startS=0,day=null}={}) {
+  constructor(route,{scenario='normal',seed=7301,vehicle='car',startS=0,day=null,warmupSteps=2400}={}) {
     this.route=route;this.trafficSeed=seed;this.mainlineDepartures=[];this.mainlinePaths=new Map();this.routeExits=route.data.sceneryProfile==='south-hsinchu'?route.points.filter((p,i)=>i&&p.highway==='motorway_link'&&route.points[i-1].highway==='motorway').map(p=>p.s):[];this.stationRanges=[...(route.data.bikeStationMappings||[]),...(route.data.bikeDivergenceRanges||[])];this.bikeRoute=route.data.bikePoints?new Route({...route.data,points:route.data.bikePoints,lengthMeters:route.data.bikePoints.at(-1).s}):route;this.bikeSplit=route.data.bikeSplitS??4164.04;this.day=day;this.tripEndS=vehicle==='bus'&&route.data.schoolStop&&route.data.direction!=='return'?route.data.schoolStop.s-6:vehicle==='bike'?this.bikeRoute.length:route.length;this.weather=WEATHER[day?.weather||'sunny'];this.flashAt=-100;this.feedback=[];this.feedbackId=0;this.greenIdle=0;this.rearPressureUntil=0;this.lastRear=-100;this.nextAmbientHorn=14;this.boxWait=0;this.scenario=scenario;this.rng=seeded(seed);this.time=0;this.id=0;this.cars=[];this.spawned=0;this.exited=0;this.pending=[];
     this.highwayQueue=scenario==='incident'?135:8;this.diverted=0;this.entered=0;this.accumulators=[0,0];this.sideQueue=0;
     const raw=vehicle==='bike'?(route.data.bikeIntersections||route.data.intersections||[]):route.data.intersections||[];const signalRoute=vehicle==='bike'?this.bikeRoute:route;
@@ -33,7 +33,7 @@ export class TrafficSimulation {
     this.encounterRoll=seeded(Math.imul(day?.seed??seed,2654435761)^0x51b7);
     this.nextSlowAt=day && this.encounterRoll()<.8 ? 5+this.encounterRoll()*16 : Infinity;
     // Pre-roll traffic; the player is inserted only after network queues settle.
-    for(let i=0;i<2400;i++)this.stepTraffic(.05,false);
+    for(let i=0;i<warmupSteps;i++)this.stepTraffic(.05,false);
     this.time=0;this.totalTime=0;this.cars=this.cars.filter(v=>{if(Math.abs(v.s-this.player.s)<12){this.exited++;return false;}return true;});
     if(day){
       this.signals.forEach((s,i)=>{s.offset=(s.offset+day.phaseShift)%s.cycle;s.camera=day.redCameras&&i%2===0;s.yellowBox=day.yellowBox;});

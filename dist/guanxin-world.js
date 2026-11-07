@@ -7,10 +7,13 @@ const district='關新路・實際街廓';
 const palette=[0xa29e92,0xb3aea0,0xaaa69a,0x98998f,0xbab5a5];
 const average=points=>points.reduce((a,p)=>({x:a.x+p.x/points.length,z:a.z+p.z/points.length}),{x:0,z:0});
 
-function facadeTexture(height,width,variant){
+function facadeTexture(height,width,variant,cache,lowPower){
  if(typeof document==='undefined')return null;
- const c=document.createElement('canvas');c.width=512;c.height=1024;
- const g=c.getContext('2d'),floors=Math.max(2,Math.round(height/3.2)),bays=Math.max(2,Math.round(width/3.2));
+ const bucket=(n,steps)=>steps.find(v=>v>=n)??steps.at(-1);
+ const floors=bucket(Math.max(2,Math.round(height/3.2)),[2,4,8,12,16,24,32]),bays=bucket(Math.max(2,Math.round(width/3.2)),[2,4,8,12,16]);
+ variant=((variant%20)+20)%20;const key=[floors,bays,variant].join(':');if(cache.has(key))return cache.get(key);
+ const c=document.createElement('canvas');c.width=lowPower?64:128;c.height=lowPower?128:256;
+ const g=c.getContext('2d');g.scale(c.width/512,c.height/1024);
  g.fillStyle=['#aaa79d','#b7b0a1','#9d9f98','#c0b8a7'][variant%4];g.fillRect(0,0,512,1024);
  for(let f=0;f<floors;f++)for(let b=0;b<bays;b++){
   const x=b*512/bays,y=f*1024/floors,bw=512/bays,fh=1024/floors;
@@ -21,10 +24,10 @@ function facadeTexture(height,width,variant){
   if((b+variant)%3===0){g.fillStyle='#747e79';g.fillRect(x+bw*.12,y+fh*.87,bw*.34,fh*.08);}
  }
  const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
- return tex;
+ cache.set(key,tex);return tex;
 }
 
-function building(parts,sites,b,group){
+function building(parts,sites,b,group,textureCache,lowPower){
  let outline=b.points.slice();
  if(Math.hypot(outline[0].x-outline.at(-1).x,outline[0].z-outline.at(-1).z)<.02)outline.pop();
  const height=Math.max(3.2,Math.min(100,b.height??12)),center=average(outline);
@@ -39,7 +42,7 @@ function building(parts,sites,b,group){
   const a=outline[i],z=outline[(i+1)%outline.length],dx=z.x-a.x,dz=z.z-a.z,len=Math.hypot(dx,dz);
   if(len<3.5)continue;
   const yaw=Math.atan2(-dz,dx),anchor={x:(a.x+z.x)/2,z:(a.z+z.z)/2,yaw};
-  const tex=facadeTexture(height-4,len,b.osmWayId===827291354?2:b.osmWayId+i);
+  const tex=facadeTexture(height-4,len,b.osmWayId===827291354?2:b.osmWayId+i,textureCache,lowPower);
   const window=new THREE.Mesh(new THREE.PlaneGeometry(len-.16,height-4.2),
    new THREE.MeshStandardMaterial({map:tex,color:0xffffff,roughness:.64,side:THREE.DoubleSide}));
   const normal=Math.hypot(anchor.x-center.x,anchor.z-center.z)||1;
@@ -125,12 +128,12 @@ export function makeGuanxin(world,parts,sites){
  const {route}=world,group=parts.group(district);group.userData.buildingIds=[];
  const first=route.points.find(p=>p.road==='關新路');if(!first)return;
  sites.streetCenter=first;
- const buildings=world.route.data.guanxinBuildings??world.route.data.buildings??[];
+ const buildings=world.route.data.guanxinBuildings??world.route.data.buildings??[],textureCache=new Map();
  for(const b of buildings){
   if((route.data.restaurants||[]).some(s=>s.osmWayId===b.osmWayId))continue;
   const c=average(b.points);
   if(c.x<-1000||c.x>-420||c.z<2950||c.z>4100)continue;
-  building(parts,sites,b,group);
+  building(parts,sites,b,group,textureCache,world.lowPower);
  }
  const path=world.carFrames,half=p=>route.width(p.s)/2;
  const runs=ribbonRuns(path,(a,b)=>onGuanxin(route,a.s)&&onGuanxin(route,b.s));
