@@ -31,9 +31,13 @@ export function makeRestaurants(world){
   // The service lane is reserved in RoadClearance before trees or furniture are placed.
   world.roadLine(shop.driveway,3.3,world.mats.road,.065);
   const pole=road.sample(Math.max(0,shop.serviceS-24),-3.3);
-  cube(group,.34,8,.34,steel,pole.x,4,pole.z);cube(group,3.6,2.6,.5,red,pole.x,7,pole.z,yaw);
-  plate(group,'麥當勞',3.5,1,pole.x+Math.sin(yaw)*.28,7.3,pole.z+Math.cos(yaw)*.28,yaw);
-  plate(group,'得來速 →',3.5,.9,pole.x+Math.sin(yaw)*.29,6.35,pole.z+Math.cos(yaw)*.29,yaw,'#302e2b','#efc553');
+  if(world.blenderAssets?.arch){
+   const sign=world.blenderAssets.arch.clone(true);sign.name='金色雙拱招牌柱';sign.position.set(pole.x,0,pole.z);sign.rotation.y=yaw;group.add(sign);
+  }else{
+   cube(group,.34,8,.34,steel,pole.x,4,pole.z);cube(group,3.6,2.6,.5,red,pole.x,7,pole.z,yaw);
+   plate(group,'麥當勞',3.5,1,pole.x+Math.sin(yaw)*.28,7.3,pole.z+Math.cos(yaw)*.28,yaw);
+   plate(group,'得來速 →',3.5,.9,pole.x+Math.sin(yaw)*.29,6.35,pole.z+Math.cos(yaw)*.29,yaw,'#302e2b','#efc553');
+  }
   // Menu/order pedestal beside the lane, keeping the car body envelope open.
   const board=road.sample(shop.serviceS-17,-2.1);
   cube(group,.35,1.5,.35,steel,board.x,.75,board.z);
