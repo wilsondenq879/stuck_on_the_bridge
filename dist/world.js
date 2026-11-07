@@ -1,19 +1,19 @@
 import {smoothCameraYaw} from './camera-stability.js?v=0.9.5';
 import {BlenderTrafficBatch,BlenderVehicleBatch} from './blender-assets.js?v=0.9.7';
-import {makeRestaurants} from './restaurant-world.js?v=0.9.7';
+import {makeRestaurants} from './restaurant-world.js?v=0.9.8';
 import {visibleRestaurantActors,alignInterchange} from './restaurant-queues.js?v=0.9.3';
-import {makeBusParts} from './bus-world.js?v=0.9.3';
+import {makeBusParts} from './bus-world.js?v=0.9.8';
 import {drawText} from './game-text.js?v=0.8.2-puns';
-import {onGuanxin} from './guanxin-world.js?v=0.9.6';
+import {onGuanxin} from './guanxin-world.js?v=0.9.8';
 import * as THREE from './vendor/three.module.js';
-import {Route,clamp,lerp,seeded,steeredYaw} from './geo.js?v=0.8.0';
+import {Route,clamp,lerp,seeded,steeredYaw} from './geo.js?v=0.9.8';
 import {buildInterchange,interchangeRoads} from './interchange.js';
 import {alignmentAt,appendRibbon,bikeBranches,ribbonRuns,roadFrames,routeFrames,RoadClearance} from './road-geometry.js';
 import {WEATHER,earthquakeAt,geographicPoint,intrudesRoad,rectangleFootprint} from './environment.js';
-import {EnvironmentWorld} from './environment-world.js?v=0.9.7';
+import {EnvironmentWorld} from './environment-world.js?v=0.9.8';
 import {isErchong,streetDistrict,mappedBuildingStyle} from './neighborhood.js';
-import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.6';
-import {makeErchongStreets,makeCommunityExit} from './neighborhood-world.js?v=0.8.2-puns';
+import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.8';
+import {makeErchongStreets,makeCommunityExit} from './neighborhood-world.js?v=0.9.8-puns';
 
 const COLORS=[0xd7d9d7,0x384f56,0x8b969b,0x202d35,0xb3aa91,0x7c4c43,0xe0e3dc];
 const Y=new THREE.Vector3(0,1,0);
@@ -352,7 +352,7 @@ export class DrivingWorld {
  }
  updateDial(speed,auto,gear){if(this.dialFace&&!this.dialFace.visible)return;const c=this.dialCanvas.getContext('2d');c.fillStyle='#102427';c.fillRect(0,0,512,256);c.strokeStyle='#4b6d6c';c.lineWidth=3;c.beginPath();c.arc(256,170,130,Math.PI,Math.PI*2);c.stroke();c.strokeStyle='#d9e5ca';c.lineWidth=7;c.beginPath();c.arc(256,170,130,Math.PI,Math.PI+Math.min(speed/80,1)*Math.PI);c.stroke();c.fillStyle='#eef1db';c.textAlign='center';c.font='100 106px monospace';drawText(c,Math.round(speed),256,177);c.font='20px sans-serif';drawText(c,'km/h',256,216);c.font='27px monospace';c.fillStyle=auto?'#9fc6a4':'#abbcb0';drawText(c,auto?'ACC':gear,70,197);drawText(c,'07:45',425,197);this.dialTexture.needsUpdate=true;}
  draw(sim,dt,{menu=false,look=0,pitch=0,chase=false,challenge=null}={}){const player=challenge?.player||sim.player;
- const p=challenge?{x:this.challengeOrigin.x+player.offset,z:this.challengeOrigin.z-player.s,y:challenge.height()-(challenge.fall?Math.min(7,challenge.fall*3):0),yaw:0,pitch:challenge.kind==='garage'&&player.s>15&&player.s<58?.346:0}:(this.kind==='bike'?this.bikeRoute:this.route).sample(player.s,player.offset);
+ const p=challenge?{x:this.challengeOrigin.x+player.offset,z:this.challengeOrigin.z-player.s,y:challenge.height()-(challenge.fall?Math.min(7,challenge.fall*3):0),yaw:0,pitch:challenge.kind==='garage'&&player.s>15&&player.s<58?.346:0}:player.world||(this.kind==='bike'?this.bikeRoute:this.route).sample(player.s,player.offset);
  if(!challenge){this.blenderRoads?.update(p.x,p.z);this.blenderScenery?.update(p.x,p.z);}
  if(this.challengeGroup)this.challengeGroup.visible=!!challenge;if(challenge)this.updateChallenge(challenge);
  const yaw=steeredYaw(p.yaw,player.heading),moved=this.lastCameraPosition?Math.hypot(p.x-this.lastCameraPosition.x,p.z-this.lastCameraPosition.z):Infinity;
@@ -363,7 +363,6 @@ export class DrivingWorld {
  const own={s:player.s,offset:player.offset,color:4,paint:0xd3b557,model:this.carModel,braking:player.braking,world:{...p,yaw:steeredYaw(p.yaw,player.heading)}};this.playerCars.update(chase&&this.kind==='car'?[own]:[],this.route);this.playerBikes.update(chase&&this.kind==='bike'?[own]:[],this.route);this.playerBuses.update(chase&&this.kind==='bus'?[own]:[],this.route);
  this.wheel.rotation.z=-player.steering*(this.kind!=='bike'?.9:.15);
  this.sun.position.set(p.x-100,p.y+160,p.z-100);this.sun.target.position.set(p.x,p.y,p.z);this.sun.target.updateMatrixWorld();
- for(const c of sim.cars){if(c.schoolTurningAt!==undefined){const p=this.route.sample(c.s,c.offset);c.world={...p,yaw:p.yaw-Math.min(1.3,(sim.time-c.schoolTurningAt)*.4)};}}
  for(const c of sim.cars)c.flashing=c.flashUntil>sim.time&&Math.sin(sim.time*15)>0;
  const visible=challenge?[]:sim.cars.filter(c=>Math.abs(c.s-player.s)<570 && !(chase&&c.s<player.s&&c.s>player.s-15));
  visible.sort((a,b)=>Math.abs(a.s-player.s)-Math.abs(b.s-player.s));
@@ -374,7 +373,24 @@ export class DrivingWorld {
    if(!challenge&&Math.abs(s-player.s)<450&&!restaurantCars.some(c=>{const a=this.opposingAt(s);return Math.hypot(a.x-c.world.x,a.z-c.world.z)<8;}))opposing.push({s,world:this.opposingAt(s),visualId:'opposing-'+i,color:i%7,reverse:true,braking:false,kind:'car'});
  }
  const continuing=challenge?[]:(sim.mainlineDepartures||[]).filter(c=>Math.abs(c.s-player.s)<700).map(c=>{const p=c.mainlinePath?.sample(c.mainlineS+c.speed*c.age,c.mainlineOffset);return {...c,world:{x:p?.x??c.origin.x+c.tx*c.speed*c.age,z:p?.z??c.origin.z+c.tz*c.speed*c.age,y:c.origin.y,yaw:p?.yaw??c.yaw}};});
- const crossing=[];for(const light of sim.signals){if(challenge||Math.abs(light.s-player.s)>450||light.fictional)continue;const ph=sim.phase(light);if(!['red','blocked'].includes(ph.state))continue;const at=sim.pathFor(sim.player.vehicle).sample(light.s);for(let i=0;i<5;i++){const along=((sim.time*(ph.blocked?.6:5)+i*9)%75)-37.5;crossing.push({s:light.s,visualId:'crossing-'+light.s+'-'+i,offset:0,color:i+1,braking:ph.blocked,world:{x:at.x+at.rx*along,y:at.y+.02,z:at.z+at.rz*along,yaw:at.yaw+Math.PI/2}});}}this.carBatch.update([...restaurantCars,...visible.filter(c=>c.kind==='car'),...continuing.filter(c=>c.kind==='car'),...opposing,...crossing],this.route);this.bikeBatch.update(visible.filter(c=>c.kind==='bike'),this.bikeRoute);this.busBatch.update([...visible.filter(c=>c.kind==='bus'),...continuing.filter(c=>c.kind==='bus')],this.route);
+ const crossing=[];
+ for(const light of sim.signals){
+   if(challenge||light.fictional||Math.abs(light.s-player.s)>450||sim.phase(light).state!=='red')continue;
+   const path=sim.player.vehicle==='bike'?this.bikeRoute:this.route;
+   if(light.crossPath===undefined){
+     const at=path.sample(light.s),built=new Set([...(this.route.data.segments||[]),...(this.route.data.bikeSegments||[])].map(r=>r.osmWayId));
+     light.crossPath=null;
+     for(const r of this.route.data.surroundingRoads||[]){
+       if(r.bridge||r.distance<7||built.has(r.osmWayId)||r.points.length<2)continue;
+       const frames=roadFrames(r.points),road=new Route({points:frames}),near=road.nearest(at.x,at.z),p=road.sample(near.s);
+       if(near.d<6&&Math.abs(at.tx*p.tx+at.tz*p.tz)<.65&&road.length>15){light.crossPath={road,station:near.s};break;}
+     }
+   }
+   if(!light.crossPath)continue;
+   const {road,station}=light.crossPath,start=Math.max(3,station-32),end=Math.min(road.length-3,station+32);
+   for(let i=0;i<Math.floor((end-start)/11);i++)crossing.push({s:light.s,visualId:'crossing-'+light.s+'-'+i,color:i+1,world:road.sample(start+(sim.time*5+i*11)%(end-start))});
+ }
+ this.carBatch.update([...restaurantCars,...visible.filter(c=>c.kind==='car'),...continuing.filter(c=>c.kind==='car'),...opposing,...crossing],this.route);this.bikeBatch.update(visible.filter(c=>c.kind==='bike'),this.bikeRoute);this.busBatch.update([...visible.filter(c=>c.kind==='bus'),...continuing.filter(c=>c.kind==='bus')],this.route);
  for(const m of this.signalModels){const state=sim.phase(m.signal).state;for(let i=0;i<3;i++){const active=(['green','blocked'].includes(state)&&i===2)||(state==='yellow'&&i===1)||(state==='red'&&i===0);const color=[0xf45843,0xffbf52,0x8ce4ad][i];m.bulbs[i].color.setHex(active?color:0x263831);m.bulbs[i].emissive.setHex(active?color:0);m.bulbs[i].emissiveIntensity=active?1.7:0;}}
  if(!chase&&!challenge&&!menu&&sim.totalTime-this.lastMirror>(this.lowPower?.5:.14)){const mirrorRoute=this.kind==='bike'?this.bikeRoute:this.route;const back=mirrorRoute.sample(Math.max(0,player.s-4),player.offset);this.rearCamera.position.set(back.x,back.y+(this.kind==='bus'?2.7:1.65),back.z);const target=mirrorRoute.sample(Math.max(0,player.s-80),player.offset);this.rearCamera.lookAt(target.x,target.y+1.5,target.z);this.cockpit.visible=false;this.renderer.setRenderTarget(this.rearTarget);this.renderer.render(this.scene,this.rearCamera);this.renderer.setRenderTarget(null);this.cockpit.visible=!chase;this.lastMirror=sim.totalTime;}
  this.environment?.update(sim,p,dt,challenge);this.renderer.render(this.scene,this.camera);
