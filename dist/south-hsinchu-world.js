@@ -1,3 +1,4 @@
+import {makeGuanxinPark} from './guanxin-park.js?v=0.9.0';
 import {drawText} from './game-text.js?v=0.8.2-puns';
 import {makeGuanxin} from './guanxin-world.js?v=0.8.2-puns';
 import * as THREE from './vendor/three.module.js';
@@ -238,6 +239,22 @@ function campusScene(parts,sites,data){
     break;
   }
 }
+function schoolRoadside(parts,sites,data){
+ const stop=data.schoolStop;if(!stop)return;const route=sites.world.route;
+ for(let i=0;i<12;i++){
+  const s=stop.s-12-i*9;if(s<0)continue;
+  const p=route.sample(s,route.width(s)/2+.6);
+  if(!sites.safe(rectangleFootprint(p.x,p.z,.6,.6,p.yaw),1))continue;
+  parts.add(school,p,0,.10,0,.52,.15,.52,0x414943);
+  parts.add(school,p,0,.42,0,.28,.58,.28,0xd78b4d,'round');
+  parts.add(school,p,0,.45,0,.30,.12,.30,0xe5daba,'round');
+ }
+ const p=route.sample(stop.s-95,route.width(stop.s-95)/2+2.3);
+ if(sites.safe(rectangleFootprint(p.x,p.z,2.5,1,p.yaw),2.6)){
+  parts.add(school,p,0,1,0,.14,2,.14,0x738476);
+  sign(parts,school,{...p,y:2.15},'接送排隊 → 右轉入校','減速慢行・依序接送',2.4,.95);
+ }
+}
 function motorwayWall(parts,sites,route,s,side){
   for(let i=0;i<7;i++){
     const at=s+i*6.4;if(at>route.length||!route.highway(at).startsWith('motorway'))break;
@@ -318,6 +335,7 @@ function mappedGround(parts,sites,data){
     if(mainPark){
       const group=parts.group(name),c=mid(outline);group.userData.osmWayId=134204596;
       polygonMesh(group,'關新公園・實際園界',outline,0,0x8b9d6e,-.078);
+      makeGuanxinPark(parts,sites,outline);
       const walk=outline.map(p=>({x:c.x+(p.x-c.x)*.80,z:c.z+(p.z-c.z)*.80}));
       for(let i=0;i<walk.length;i++){
         const a=walk[i],b=walk[(i+1)%walk.length],dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz);
@@ -381,7 +399,7 @@ export function makeSouthHsinchu(world){
   if(data.sceneryProfile!=='south-hsinchu')return null;
   const group=new THREE.Group();group.name='南新竹通勤街景';world.scene.add(group);
   const parts=new SceneParts(group),sites=new Sites(world),visited=new Set(),random=seeded(66122);
-  makeGuanxin(world,parts,sites);campusScene(parts,sites,data);shoreline(parts,sites,data);mappedGround(parts,sites,data);companyBuildings(parts,sites,data);
+  makeGuanxin(world,parts,sites);campusScene(parts,sites,data);schoolRoadside(parts,sites,data);shoreline(parts,sites,data);mappedGround(parts,sites,data);companyBuildings(parts,sites,data);
   const paths=[[route,data.sceneryDistricts]];
   if(bikeRoute&&bikeRoute!==route)paths.push([bikeRoute,data.bikeSceneryDistricts]);
   for(const [path,ranges] of paths){
