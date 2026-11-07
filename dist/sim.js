@@ -228,7 +228,8 @@ export class TrafficSimulation {
     let front=this.closest(p.s+.01,p.offset,spec.width,null,false),gap=front?front.s-p.s-(front.length+spec.length)/2:1e5,stop=this.stopAt(p.s);if(p.auto){const box=this.signals.find(l=>l.yellowBox&&l.s-8>p.s&&l.s-p.s<120&&front&&front.s<l.s+25+spec.length&&front.speed<1.8);if(box&&(!stop||box.s-8-p.s<stop.gap))stop={gap:box.s-8-p.s,signal:box};}
     if(p.auto&&!gas&&!brake){const cameraNear=this.day?.cameras.some(c=>c.s-p.s>-5&&c.s-p.s<160);gas=p.speed<(cameraNear?10.4:(p.vehicle!=='bike'&&localRoute.highway(p.s)==='motorway'?25:11.2))?1:0;const distance=Math.min(gap,stop?stop.gap-spec.length/2:1e5);if(distance<Math.max(5,p.speed*p.speed/(7*this.weather.grip)+3)){gas=0;brake=1;}}
     const onMotorway=p.vehicle!=='bike'&&localRoute.highway(p.s)==='motorway',maximum=onMotorway?(p.vehicle==='bus'?22.2:27.8):spec.maxSpeed;
-    const slope=this.court&&p.s>this.schoolQueue.gate-1600&&p.s<this.schoolQueue.gate+530?localRoute.sample(p.s).pitch:0;
+    const hillStation=p.vehicle==='bike'?this.route.data.schoolStop?.bikeS:this.route.data.schoolStop?.s;
+    const slope=Math.abs(p.s-hillStation)<1800?localRoute.sample(p.s).pitch:0;
     const resistance=.25+p.speed*.026+9.81*Math.sin(slope);let accel=gas*spec.accel*this.weather.grip-brake*spec.brake*this.weather.grip-resistance;if(p.speed===0&&gas===0)accel=0;p.speed=clamp(p.speed+accel*dt,0,maximum);p.braking=!!brake;
     let newOffset=p.offset+steer*(p.vehicle==='bike'?2.8:p.vehicle==='bus'?1.45:2.25)*dt+windAt(this.day,this.totalTime,p.vehicle)*Math.min(1,p.speed/5)*dt;
     const edge=localRoute.width(p.s+p.speed*dt)/2-spec.width/2-.05;

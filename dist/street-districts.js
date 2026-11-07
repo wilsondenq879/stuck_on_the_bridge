@@ -16,9 +16,11 @@ export class StreetDistricts {
    if(old)return old.promise;
    const entry={};this.assets.set(key,entry);
    entry.promise=(async()=>{
-    const response=await fetch('assets/streets/'+key+'.glb.gz?v=098');
+    const response=await fetch('assets/streets/'+key+'.glb.gz?v=0981');
     if(!response.ok)throw Error('街景載入失敗 '+key);
-    const bytes=await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+    let bytes=await response.arrayBuffer();
+    // A host can serve .gz as a file or decode it via Content-Encoding.
+    if(new Uint8Array(bytes)[0]===0x1f)bytes=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
     const {scene}=await this.tiles.loader.parseAsync(bytes,'');
     if(this.closed){this.tiles.destroy(scene);return;}
     entry.root=scene;this.tiles.root.add(scene);
