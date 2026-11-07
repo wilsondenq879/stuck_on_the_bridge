@@ -1,11 +1,11 @@
 import {drawText,installGameText} from './game-text.js?v=0.8.2-puns';
 import {Route,clamp,lerp} from './geo.js?v=0.8.0';
-import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.0';
-import {DrivingWorld} from './world.js?v=0.9.0';
+import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.1';
+import {DrivingWorld} from './world.js?v=0.9.1';
 import {rollDay,dayLabels,LocalChallenge} from './day.js?v=0.8.0';
 import {readGamepad,mergeControls} from './controls.js';
 import {WEATHER,earthquakeAt} from './environment.js';
-import {CommuteAudio} from './audio.js?v=0.9.0';
+import {CommuteAudio} from './audio.js?v=0.9.1';
 import {TouchDriveInput,bindTouchControls} from './touch-controls.js';
 
 installGameText(document.body);
@@ -67,6 +67,7 @@ $('start').addEventListener('click',async()=>{
   day=rollDay(freshSeed(),route);scenario=day.scenario;
   const choice=$('startPoint').value;const erchong=data.originLabel?.startsWith('二重埔');let startS=choice==='bridge'?(data.landmarks.find(x=>x.kind==='bridge')?.s||705)+20:choice==='city'?(erchong?(data.landmarks.find(x=>x.name==='關東橋')?.s||3000):(data.eventRegions?.urbanStartS||2476))+15:choice==='shops'?(data.retailLandmarks?.[0]?.s||3032)-180:choice==='park'?(data.elevatedRanges?.[0]?.startS||data.eventRegions?.parkEntryS||3779)-60:choice==='arrival'?Math.max(0,data.lengthMeters-650):0;
   if(choice==='guanxinPark'){const path=vehicle==='bike'?sim?.bikeRoute:route,area=data.landscapeAreas?.find(a=>a.osmId===134204596);if(area){const center=area.points.reduce((p,q)=>({x:p.x+q.x/area.points.length,z:p.z+q.z/area.points.length}),{x:0,z:0});startS=Math.max(0,path.nearest(center.x,center.z).s-18);}}
+  if(choice==='restaurant'){const shop=data.restaurants?.[0];if(shop)startS=Math.max(0,(vehicle==='bike'?shop.bikeS:shop.s)-65);}
   const quick=data.quickStarts?.find(q=>q.value===choice);if(quick)startS=vehicle==='bike'?(quick.bikeS??quick.s):quick.s;
   sim=new TrafficSimulation(route,{vehicle,scenario,startS,day,seed:day.seed});sim.startS=startS;
   challenge=choice==='0'&&day.chapter?new LocalChallenge(day,vehicle):null;
@@ -175,7 +176,8 @@ function updateHUD(){
  }
  const quake=earthquakeAt(day,sim.totalTime)>0;
  const schoolNear=!challenge&&sim.schoolQueue&&Math.abs(p.s-(vehicle==='bike'?data.schoolStop.bikeS:data.schoolStop.s))<380;
- const chip=schoolNear?'糠橋接送車隊 · 緩慢通過':quake?'地震 · 減速':challenge?.kind==='garage'?(p.s<60?'陡坡 · 輕油門':'社區出口'):challenge?.kind==='sinkhole'?'留意路面':scenario==='incident'?sim.incidentState().label:day.weather==='typhoon'?'強風 · 路滑':'';
+ const restaurantNear=!challenge&&(sim.restaurantQueues||[]).find(q=>Math.abs(p.s-(vehicle==='bike'?q.shop.bikeS:q.shop.s))<180);
+ const chip=quake?'地震 · 減速':restaurantNear?'麥當勞 · '+restaurantNear.waiting+' 輛排隊':schoolNear?'糠橋接送車隊 · 緩慢通過':challenge?.kind==='garage'?(p.s<60?'陡坡 · 輕油門':'社區出口'):challenge?.kind==='sinkhole'?'留意路面':scenario==='incident'?sim.incidentState().label:day.weather==='typhoon'?'強風 · 路滑':'';
  $('mobileEvent').hidden=!chip;$('mobileEventText').textContent=chip;
  if($('trafficDialog').open){$('detailRoute').textContent=name+' → '+data.destinationLabel;$('detailDistance').textContent=$('travelled').textContent+' km';$('detailWait').textContent=duration(p.wait||0);$('detailPoints').textContent=day.points;$('detailContext').textContent=$('weatherLine').textContent+' · '+$('autoState').textContent;}
  const newNotice=challenge?.fall?challenge.message:sim.lastMessage;if(newNotice&&newNotice!==notice){notice=newNotice;message(notice);}
@@ -206,7 +208,7 @@ function showError(e){console.error(e);$('errorText').textContent=`無法載入 
 async function loadRoute(id){
  const token=++routeLoadToken;ready=false;$('start').disabled=true;$('start').firstElementChild.textContent='正在建構實際路線…';
  const entry=routeIndex.routes.find(r=>r.id===id);if(!entry)throw new Error('找不到路線');
- const response=await fetch('data/routes/'+entry.file+'?v=0.8.1');if(!response.ok)throw new Error('路線資料讀取失敗');const next=await response.json();if(token!==routeLoadToken)return;
+ const response=await fetch('data/routes/'+entry.file+'?v=0.9.1');if(!response.ok)throw new Error('路線資料讀取失敗');const next=await response.json();if(token!==routeLoadToken)return;
  if(next.sceneryProfile==='south-hsinchu'){
   guanxinData??=await fetch('data/guanxin.json?v=0.8.1').then(r=>{if(!r.ok)throw new Error('關新街廓讀取失敗');return r.json();});
   next.guanxinBuildings=guanxinData.buildings;
@@ -217,7 +219,7 @@ async function loadRoute(id){
  $('directionRow').hidden=vehicle==='bus'||entry.originKey!=='guanxin';$('destinationChoice').closest('label').hidden=vehicle==='bus';$('tripDirection').value=entry.direction??'outbound';
  $('routeVehicleNote').hidden=entry.originKey!=='guanxin';$('routeVehicleNote').textContent=vehicleRouteNote();
  const options=[['0',data.sceneryProfile==='south-hsinchu'?(data.direction==='return'?'完整回程 · 經康橋、明湖路':'完整去程 · 經康橋再進園區'):'完整通勤 · 含隨機序章']];if(entry.originKey==='zhubei')options.push(['bridge','經國大橋 · 略過序章'],['city','慈雲路 · 略過序章'],['shops','Costco／迪卡儂 · 略過序章']);else if(entry.originKey==='erchong')options.push(['city','關東橋／光復路 · 略過序章']);options.push(['park','園區入口 · 略過序章'],['arrival','公司前 650 m · 略過序章']);
- if(data.quickStarts)options.splice(1,options.length-1,...data.quickStarts.filter(q=>vehicle!=='bus'||q.s<data.schoolStop.s).map(q=>[q.value,q.label]));if(entry.originKey==='guanxin')options.splice(1,0,['guanxinPark','關新公園・遊戲場旁']);if(vehicle==='bus')options[0][1]='完整交通車任務・關新路 → 糠橋';
+ if(data.quickStarts)options.splice(1,options.length-1,...data.quickStarts.filter(q=>vehicle!=='bus'||q.s<data.schoolStop.s).map(q=>[q.value,q.label]));if(entry.originKey==='guanxin')options.splice(1,0,['guanxinPark','關新公園・遊戲場旁']);if(data.restaurants?.length)options.splice(1,0,['restaurant','麥當勞・得來速車龍旁']);if(vehicle==='bus')options[0][1]='完整交通車任務・關新路 → 糠橋';
  $('startPoint').replaceChildren(...options.map(([value,label])=>{const o=document.createElement('option');o.value=value;o.textContent=label;return o;}));
  $('routeSummary').textContent=vehicle==='bus'?'關新路 → 國道一號・國道三號 → 糠橋校外接送點':entry.originKey==='guanxin'?(data.direction==='return'?data.originLabel+' → 康橋 → 明湖路 → 關新路':'關新路 → '+(vehicle==='bike'?'寶山平面道路':'國道一號・國道三號')+' → 康橋 → '+data.destinationLabel):data.routeSummary||entry.routeSummary||(entry.originKey==='zhubei'?'經國大橋 → 慈雲路':'中興路四段 → 光復路')+' → '+entry.destinationLabel;
  $('routeDescription').textContent=data.originLabel+' → '+data.landmarks.filter(x=>x.s>0&&x.s<data.lengthMeters-50).map(x=>x.name).join(' → ')+' → '+data.destinationLabel+'。汽車 '+(data.lengthMeters/1000).toFixed(2)+' km；機車 '+(data.bikeLengthMeters/1000).toFixed(2)+' km。';

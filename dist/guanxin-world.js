@@ -127,6 +127,7 @@ export function makeGuanxin(world,parts,sites){
  sites.streetCenter=first;
  const buildings=world.route.data.guanxinBuildings??world.route.data.buildings??[];
  for(const b of buildings){
+  if((route.data.restaurants||[]).some(s=>s.osmWayId===b.osmWayId))continue;
   const c=average(b.points);
   if(c.x<-1000||c.x>-420||c.z<2950||c.z>4100)continue;
   building(parts,sites,b,group);

@@ -1,6 +1,6 @@
-import {makeGuanxinPark} from './guanxin-park.js?v=0.9.0';
+import {makeGuanxinPark} from './guanxin-park.js?v=0.9.1';
 import {drawText} from './game-text.js?v=0.8.2-puns';
-import {makeGuanxin} from './guanxin-world.js?v=0.8.2-puns';
+import {makeGuanxin} from './guanxin-world.js?v=0.9.1';
 import * as THREE from './vendor/three.module.js';
 import {seeded} from './geo.js?v=0.8.0';
 import {intrudesRoad, pointInPolygon, rectangleFootprint} from './environment.js?v=0.8.0';
