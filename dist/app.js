@@ -1,12 +1,12 @@
 import {safeRoadStart} from './quick-start.js?v=0.9.3';
 import {loadBlenderAssets,loadBlenderChapter} from './blender-assets.js?v=0.9.7';
 import {BlenderRoads} from './blender-roads.js?v=0.9.8';
-import {BlenderScenery} from './blender-scenery.js?v=0.9.8';
+import {BlenderScenery} from './blender-scenery.js?v=0.9.8.1';
 import {WorldArchive} from './world-archive.js?v=0.9.7';
 import {drawText,installGameText} from './game-text.js?v=0.8.2-puns';
 import {Route,clamp,lerp} from './geo.js?v=0.9.8';
-import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.8';
-import {DrivingWorld} from './world.js?v=0.9.8';
+import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.8.1';
+import {DrivingWorld} from './world.js?v=0.9.8.1';
 import {rollDay,dayLabels,LocalChallenge} from './day.js?v=0.8.0';
 import {readGamepad,mergeControls} from './controls.js';
 import {WEATHER,earthquakeAt} from './environment.js';
@@ -187,6 +187,10 @@ function updateHUD(){
   if(scenario==='incident'){$('incidentTitle').textContent=sim.incidentState().label;$('highwayQueue').textContent=m.highwayQueue;$('diverted').textContent=m.diverted;$('incidentDetail').textContent=`通勤路線 ${m.stopped} 輛停等；市區入口 ${m.pending} 輛待進入`;}
  }
  const quake=earthquakeAt(day,sim.totalTime)>0;
+ if(p.courtDistance!=null){
+  $('signalNote').hidden=true;
+  $('nextLabel').textContent=p.unloaded?'沿單行車道返回柴喬路':'水滴廣場停靠，接送後繞出';
+ }
  const schoolNear=!challenge&&sim.schoolQueue&&Math.abs(p.s-(vehicle==='bike'?data.schoolStop.bikeS:data.schoolStop.s))<380;
  const restaurantNear=!challenge&&(sim.restaurantQueues||[]).find(q=>Math.abs(p.s-(vehicle==='bike'?q.shop.bikeS:q.shop.s))<180);
  const chip=quake?'地震 · 減速':restaurantNear?'麥當勞 · '+restaurantNear.waiting+' 輛排隊':schoolNear?'糠橋接送車隊 · 緩慢通過':challenge?.kind==='garage'?(p.s<60?'陡坡 · 輕油門':'社區出口'):challenge?.kind==='sinkhole'?'留意路面':scenario==='incident'?sim.incidentState().label:day.weather==='typhoon'?'強風 · 路滑':'';

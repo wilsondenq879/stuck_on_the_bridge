@@ -134,6 +134,7 @@ for side in [-1,1]:
  beam(a,mid+side*2.1,0,13,mid+side*13,0,9.35,.08,'a5aaab')
  block(a,mid+side*7.3,0,7.2,14.4,.65,2.15,'bbbdb8')
  label(a,mid+side*7.3,-.36,8.27,10,'薪 築 瞌 學 圓 區','263e59')
+ reverse_face=frame(*at(a,mid+side*7.3,.42),-a[2],-a[3]);label(reverse_face,0,0,8.27,10,'薪 築 瞌 學 圓 區','263e59')
 zone='campus';court=g['court']
 def strip(path,left,right,raise_y,c):
  pairs=[]
@@ -152,15 +153,46 @@ for lat,lon,base in [(24.76902,120.96599,11),(24.76861,120.96604,11),(24.76840,1
  block(a,0,0,b,5.4,5.4,3.3,'dfb59a');block(a,0,0,b+3.15,6.05,6.05,.4,'f4e7ce')
  rings(x,z,b+3.55,[(0,4.1,4.1),(2.2,.16,.16)],'9a5045',4)
  for i in [-1.7,0,1.7]:block(a,i,-2.71,b+.48,1.1,.17,1.85,'547075')
-for lat,lon,dx,dz,length,base in [(24.769067,120.96581,1,-.11,45,11),(24.76879,120.96610,-.11,1,54,11),(24.76848,120.96653,.87,-.48,27,13)]:
- x,z=ll(lat,lon);a=frame(x,z,dx,dz)
- for i in range(round(length/3.2)):
-  u=i*3.2-length/2;x,z=at(a,u,0);b=h(x,z)
-  for y in [1,4.2,7.4]:
-   block(a,u,0,b+y,2.8,.28,2.1,'708083');block(a,u-1.38,0,b+y-.3,.36,.8,2.8,'eee4d3')
-   block(a,u,0,b+y+1.99,3.25,.67,.35,'f3e5d0')
-   for j in range(7):
-    t=math.pi*j/7;T=math.pi*(j+1)/7;beam(a,u+1.30*math.cos(t),-.26,b+y+1.4+.66*math.sin(t),u+1.30*math.cos(T),-.26,b+y+1.4+.66*math.sin(T),.19,'f3e5d0')
+# Match the shell edges used in the original Blender campus, including
+# the recessed east facade facing the service loop. Loft broad window arches
+# directly on both sides of each edge so they remain visible from the court.
+campus_wings=[[409216512, 12, [[24.768417, 120.9656561], [24.7684391, 120.9657188], [24.7683863, 120.9661096], [24.7683437, 120.9661579], [24.7680734, 120.9661874], [24.7680094, 120.9661512], [24.7679048, 120.9658042], [24.7679012, 120.96573], [24.7679492, 120.9656839]]], [1230511824, 13, [[24.7680954, 120.9664146], [24.7682297, 120.9667087], [24.7682416, 120.9668202], [24.7683143, 120.9667987], [24.7684509, 120.9667209], [24.7684617, 120.9667478], [24.7686196, 120.9666648], [24.7684732, 120.9663466], [24.7684206, 120.9663751], [24.7683655, 120.9662662]]], [556926000, 9, [[24.7684999, 120.9668245], [24.7686162, 120.9670896], [24.7684132, 120.967223], [24.7682707, 120.9669183]]], [1290235203, 11, [[24.7690635, 120.965517], [24.769119, 120.966047], [24.7690761, 120.9661436], [24.7684527, 120.9662111], [24.7684109, 120.9663468], [24.7683807, 120.9662889], [24.7684033, 120.9662037], [24.7683881, 120.9661218], [24.7684048, 120.9659861], [24.768476, 120.9659976], [24.7684536, 120.9661253], [24.7685637, 120.9661103], [24.7685209, 120.9657251], [24.7685589, 120.9657198], [24.7685296, 120.9655224], [24.7685803, 120.9655127], [24.7685764, 120.9654912], [24.7687206, 120.9654719], [24.7687849, 120.966003], [24.7688901, 120.9659848], [24.7688355, 120.9655063], [24.7689953, 120.9654859], [24.7690011, 120.9655266]]]]
+for way,ht,coords in campus_wings:
+ poly=[ll(*pt) for pt in coords]
+ for k,(x,z) in enumerate(poly):
+  X,Z=poly[(k+1)%len(poly)];length=math.hypot(X-x,Z-z)
+  if length<4:continue
+  a=frame((x+X)/2,(z+Z)/2,X-x,Z-z);count=max(1,int(length/4));bay=length/count
+  # Horizontal ledges and cream cornices on peach-coloured rendered walls.
+  for y in [1,4.2,7.4,ht-.4,ht+.12]:
+   for i in range(count):
+    u=(i+.5-count/2)*bay;xx,zz=at(a,u,0);base=h(xx,zz)
+    block(a,u,0,base+y,bay+.05,.63,.3,'eee5d4')
+  for i in range(count):
+   u=(i+.5-count/2)*bay;xx,zz=at(a,u,0);base=h(xx,zz)
+   block(a,u,0,base+.4,bay+.02,.34,ht-.5,'d9b59d')
+   block(a,u-bay*.47,0,base+.45,.28,.78,ht,'eee6da')
+   for floor in [1.45,4.65,7.85]:
+    if floor+1.7>ht:continue
+    w=bay*.60
+    block(a,u,0,base+floor,w,.52,1.7,'526e79')
+    block(a,u,0,base+floor,.09,.62,1.7,'d6d5c8')
+    block(a,u,0,base+floor+.96,w,.61,.10,'e2dacb')
+    for side in [-1,1]:
+     block(a,u+side*w*.53,0,base+floor-.04,.14,.69,1.73,'f6e8d5')
+    # Peach spandrels above repeated pale arch mouldings.
+    for j in range(6):
+     t=math.pi*j/6;T=math.pi*(j+1)/6
+     for v in [-.30,.30]:
+      beam(a,u+w*.52*math.cos(t),v,base+floor+1.64+.46*math.sin(t),u+w*.52*math.cos(T),v,base+floor+1.64+.46*math.sin(T),.17,'f3e9db')
+ # Square and round turrets punctuate the principal wings above the cornice.
+ if way in (1290235203,1230511824):
+  for idx in ([1,7,13] if way==1290235203 else [2,6]):
+   x,z=poly[idx];base=h(x,z)+ht-.1;a=frame(x,z,1,0)
+   rings(x,z,base,[(0,2.45,2.45),(3.7,2.45,2.45),(3.85,2.65,2.65)],'deb69d',8)
+   for u in [-1.1,.65]:block(a,u,-2.27,base+.7,.75,.28,1.6,'506977')
+   rings(x,z,base+3.82,[(0,2.8,2.8),(.28,2.8,2.8),(.3,2.65,2.65)],'f1e3ce',8)
+   rings(x,z,base+4.12,[(0,2.7,2.7),(2.5,.12,.12)],'984e43',8)
 # Small planted beds lie inside the court, clear of the one-way asphalt.
 boundary=[ll(*p) for p in [(24.76901,120.96623),(24.76856,120.96628),(24.76855,120.96633),(24.76858,120.96639),(24.76863,120.96640)]]
 cx=sum(x for x,z in boundary)/len(boundary);cz=sum(z for x,z in boundary)/len(boundary)
