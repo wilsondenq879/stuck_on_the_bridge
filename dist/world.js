@@ -110,7 +110,7 @@ export class DrivingWorld {
  const built=new Set([...interchangeRoads(this.interchange),...(this.route.data.segments??[]),...(this.route.data.bikeSegments??[])].map(r=>r.osmWayId));
  for(const id of this.crossingViaduct?.data.sourceWayIds??[])built.add(id);
  if(this.northbound)for(const id of this.interchange.renderOwnership?.skipDuplicateContextWayIds??[])built.add(id);
- for(const road of(this.route.data.surroundingRoads||[])){if(built.has(road.osmWayId)||road.bridge||(road.distance<7&&!road.name?.includes('機車')))continue;const w=road.highway?.includes('trunk')?12:['secondary','primary'].includes(road.highway)?9:5.5;this.roadLine(road.points,w,this.mats.road,-.05);}
+ for(const road of(this.route.data.surroundingRoads||[])){if(this.route.data.sceneryProfile==='south-hsinchu'&&road.highway==='motorway'&&!road.bridge){this.roadLine(road.points,3.35*(Number(road.lanes)||3),this.mats.road,-.05);continue;}if(built.has(road.osmWayId)||road.bridge||(road.distance<7&&!road.name?.includes('機車')))continue;const w=road.highway?.includes('trunk')?12:['secondary','primary'].includes(road.highway)?9:5.5;this.roadLine(road.points,w,this.mats.road,-.05);}
  // A distant skyline gives depth while the street footprints stay tied to OSM.
  }
  makeRoad(){

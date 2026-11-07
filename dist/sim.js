@@ -52,7 +52,7 @@ export class TrafficSimulation {
   }
   mainlinePath(exit){
     if(this.mainlinePaths.has(exit))return this.mainlinePaths.get(exit);
-    const heading=this.route.sample(exit-18),position=this.route.sample(exit),roads=(this.route.data.surroundingRoads||[]).filter(r=>r.highway==='motorway'&&r.name===heading.road&&r.points?.length>1);
+    const heading=this.route.sample(exit-18),position=this.route.sample(exit),roads=(this.route.data.surroundingRoads||[]).filter(r=>r.highway==='motorway'&&!r.bridge&&r.name===heading.road&&r.points?.length>1);
     const make=points=>{let s=0;return new Route({points:points.map((p,i)=>{if(i)s+=Math.hypot(p.x-points[i-1].x,p.z-points[i-1].z);return {...p,s,highway:'motorway',lanes:3};}),lengthMeters:s});};
     let best=null;
     for(const road of roads){const path=make(road.points),near=path.nearest(position.x,position.z),p=path.sample(near.s),dot=p.tx*heading.tx+p.tz*heading.tz;if(dot<.5||near.d>45)continue;const score=near.d+(path.length-near.s<20?40:0);if(!best||score<best.score)best={road,path,near,score};}
