@@ -31,11 +31,19 @@ function building(parts,sites,b,group,textureCache,lowPower){
  let outline=b.points.slice();
  if(Math.hypot(outline[0].x-outline.at(-1).x,outline[0].z-outline.at(-1).z)<.02)outline.pop();
  const height=Math.max(3.2,Math.min(100,b.height??12)),center=average(outline);
- if(!sites.safe(outline,height+6))return;
+ // Mapped building footprints can include sidewalks or driveways. Keep the
+ // identifiable volume while leaving every mapped road physically clear.
+ let footprintScale=1;
+ if(!sites.safe(outline,height+6)){
+  if(b.osmWayId!==363572242)return;
+  const scale=[.97,.94,.9,.85,.8,.75].find(k=>sites.safe(outline.map(p=>({x:center.x+(p.x-center.x)*k,z:center.z+(p.z-center.z)*k})),height+6));
+  if(!scale)return;
+  footprintScale=scale;outline=outline.map(p=>({x:center.x+(p.x-center.x)*scale,z:center.z+(p.z-center.z)*scale}));
+ }
  const shape=new THREE.Shape();outline.forEach((p,i)=>i?shape.lineTo(p.x,-p.z):shape.moveTo(p.x,-p.z));shape.closePath();
  const geo=new THREE.ExtrudeGeometry(shape,{depth:height,bevelEnabled:false});geo.rotateX(-Math.PI/2);
  const shell=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:b.osmWayId===827291354?0x969b94:palette[b.osmWayId%palette.length],roughness:.9}));
- shell.name=(b.name||'關新街廓')+'・OSM '+b.osmWayId;shell.userData={osmWayId:b.osmWayId,height,heightSource:b.heightSource};
+ shell.name=(b.name||'關新街廓')+'・OSM '+b.osmWayId;shell.userData={osmWayId:b.osmWayId,height,heightSource:b.heightSource,footprintScale};
  shell.castShadow=true;shell.receiveShadow=true;group.add(shell);
  const tall=height>42,roof=height+.5;
  for(let i=0;i<outline.length;i++){
@@ -69,11 +77,27 @@ function building(parts,sites,b,group,textureCache,lowPower){
    parts.add(district,anchor,0,roof+3.4,0,len+.4,.65,.65,0x80867c);
    for(const side of [-1,1])parts.add(district,anchor,side*(len/2-.3),roof+1.65,0,.65,3.4,.65,0x969b8f);
   }
-  const frontage=Math.hypot(anchor.x-sites.streetCenter.x,anchor.z-sites.streetCenter.z)<220;
+  // The junction storefronts are over 400 m from the route's first point;
+  // measuring from that point mistakenly erased them from the streetscape.
+  const near=sites.world.route.nearest(anchor.x,anchor.z);
+  const frontage=near.d<85&&anchor.x>-930&&anchor.x<-650&&anchor.z>3450&&anchor.z<3900;
   if(frontage&&len>9){
    parts.add(district,anchor,0,1.9,.28,len-.5,3.5,.18,0x3d5151);
    parts.add(district,anchor,0,3.9,.6,len+.2,.24,1.65,0xaca591);
    for(let x=-len/2+1;x<len/2;x+=4.8)parts.add(district,anchor,x,1.9,.8,.34,3.8,.38,0xb6ad9b);
+   if(b.osmWayId===363572242||[957540725,957540726,957540727,957540728].includes(b.osmWayId)){
+    // Abstract shop signs use fictional colours rather than real brand names.
+    for(let x=-len/2+3,j=0;x<len/2-1;x+=5.5,j++)
+     parts.add(district,anchor,x,4.35,.88,4.5,.72,.12,[0x934b43,0x43716d,0x5a6c82,0xb19a6e][j%4]);
+    group.userData.referenceFrontages++;
+   }
+  }
+  if(b.osmWayId===363572242){
+   // The 21 Guanxin Road reference has a broad, light-coloured structural
+   // grid with horizontal slabs and recessed dark glazing on every floor.
+   for(let f=1;f<Math.round(height/3.2);f++)
+    parts.add(district,anchor,0,f*3.2,.32,len+.15,.34,.48,0xb8b4a9);
+   group.userData.referenceGridFaces++;
   }
  }
  if(b.osmWayId===827291354&&typeof document!=='undefined'){
@@ -102,6 +126,8 @@ function streetTree(parts,a,variant){
     leaf,leaf*.62,leaf*1.2,[0x98a26b,0x859557,0x718c57,0xabb17a][(j+variant)%4],'leaf');
   }
  }
+ // Full canopies are especially prominent on the approach to Guangfu Road.
+ for(let j=0;j<4;j++)parts.add(district,a,Math.cos(j*1.7)*1.0,top+.4+(j%2)*.6,Math.sin(j*1.7)*1.0,2.8,2.5,2.8,[0x60794e,0x70855a,0x819164,0x6a8053][(j+variant)%4],'leaf');
 }
 
 function scooter(parts,a,variant){
@@ -125,7 +151,7 @@ function scooter(parts,a,variant){
 export function makeGuanxin(world,parts,sites){
  parts.shapes.wheel=new THREE.CylinderGeometry(.5,.5,1,10).rotateZ(Math.PI/2);
  parts.shapes.twig=new THREE.CylinderGeometry(.012,.025,1,5).rotateZ(.62);
- const {route}=world,group=parts.group(district);group.userData.buildingIds=[];
+ const {route}=world,group=parts.group(district);group.userData.buildingIds=[];group.userData.referenceFrontages=0;group.userData.referenceGridFaces=0;group.userData.medianTreeCenters=[];
  const first=route.points.find(p=>p.road==='關新路');if(!first)return;
  sites.streetCenter=first;
  const buildings=world.route.data.guanxinBuildings??world.route.data.buildings??[],textureCache=new Map();
@@ -169,6 +195,11 @@ export function makeGuanxin(world,parts,sites){
    if((route.data.intersections??[]).some(v=>Math.abs(v.s-s)<18))continue;
    const p=route.sample(s,route.width(s)/2+4.7);
    if(world.clearance.free(p.x,p.z,2.4,0,9))streetTree(parts,p,Math.floor(s));
+  }
+  for(let s=from+20;s<to-18;s+=25){
+   if((route.data.intersections??[]).some(v=>Math.abs(v.s-s)<22))continue;
+   const p=route.sample(s,-route.width(s)/2-world.medianWidth(s)/2);
+   if(world.clearance.free(p.x,p.z,.25,0,8)){streetTree(parts,p,Math.floor(s));group.userData.medianTreeCenters.push({x:p.x,z:p.z});}
   }
  }
  return group;

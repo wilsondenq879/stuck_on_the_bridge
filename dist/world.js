@@ -3,7 +3,7 @@ import {makeRestaurants} from './restaurant-world.js?v=0.9.3';
 import {visibleRestaurantActors,alignInterchange} from './restaurant-queues.js?v=0.9.3';
 import {makeBusParts} from './bus-world.js?v=0.9.3';
 import {drawText} from './game-text.js?v=0.8.2-puns';
-import {onGuanxin} from './guanxin-world.js?v=0.9.3';
+import {onGuanxin} from './guanxin-world.js?v=0.9.6';
 import * as THREE from './vendor/three.module.js';
 import {Route,clamp,lerp,seeded,steeredYaw} from './geo.js?v=0.8.0';
 import {buildInterchange,interchangeRoads} from './interchange.js';
@@ -11,7 +11,7 @@ import {alignmentAt,appendRibbon,bikeBranches,ribbonRuns,roadFrames,routeFrames,
 import {WEATHER,earthquakeAt,geographicPoint,intrudesRoad,rectangleFootprint} from './environment.js';
 import {EnvironmentWorld} from './environment-world.js?v=0.9.5';
 import {isErchong,streetDistrict,mappedBuildingStyle} from './neighborhood.js';
-import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.3';
+import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.6';
 import {makeErchongStreets,makeCommunityExit} from './neighborhood-world.js?v=0.8.2-puns';
 
 const COLORS=[0xd7d9d7,0x384f56,0x8b969b,0x202d35,0xb3aa91,0x7c4c43,0xe0e3dc];
