@@ -1,3 +1,4 @@
+import {smoothCameraYaw} from './camera-stability.js?v=0.9.5';
 import {makeRestaurants} from './restaurant-world.js?v=0.9.3';
 import {visibleRestaurantActors,alignInterchange} from './restaurant-queues.js?v=0.9.3';
 import {makeBusParts} from './bus-world.js?v=0.9.3';
@@ -8,7 +9,7 @@ import {Route,clamp,lerp,seeded,steeredYaw} from './geo.js?v=0.8.0';
 import {buildInterchange,interchangeRoads} from './interchange.js';
 import {alignmentAt,appendRibbon,bikeBranches,ribbonRuns,roadFrames,routeFrames,RoadClearance} from './road-geometry.js';
 import {WEATHER,earthquakeAt,geographicPoint,intrudesRoad,rectangleFootprint} from './environment.js';
-import {EnvironmentWorld} from './environment-world.js?v=0.8.2-puns';
+import {EnvironmentWorld} from './environment-world.js?v=0.9.5';
 import {isErchong,streetDistrict,mappedBuildingStyle} from './neighborhood.js';
 import {makeSouthHsinchu} from './south-hsinchu-world.js?v=0.9.3';
 import {makeErchongStreets,makeCommunityExit} from './neighborhood-world.js?v=0.8.2-puns';
@@ -342,8 +343,11 @@ export class DrivingWorld {
  draw(sim,dt,{menu=false,look=0,pitch=0,chase=false,challenge=null}={}){const player=challenge?.player||sim.player;
  const p=challenge?{x:this.challengeOrigin.x+player.offset,z:this.challengeOrigin.z-player.s,y:challenge.height()-(challenge.fall?Math.min(7,challenge.fall*3):0),yaw:0,pitch:challenge.kind==='garage'&&player.s>15&&player.s<58?.346:0}:(this.kind==='bike'?this.bikeRoute:this.route).sample(player.s,player.offset);
  if(this.challengeGroup)this.challengeGroup.visible=!!challenge;if(challenge)this.updateChallenge(challenge);
- this.rig.position.set(p.x,p.y,p.z);this.rig.rotation.set(p.pitch||0,steeredYaw(p.yaw,player.heading),challenge?.fall?Math.min(.5,challenge.fall*.2):0,'YXZ');
- this.camera.rotation.set(pitch+(chase?-.16:0),look,0,'YXZ');this.camera.position.set(chase?0:this.kind==='bus'?-.54:this.kind==='car'?-.36:0,chase?(this.kind==='bus'?5.6:3.5):(this.kind==='bus'?2.45:this.kind==='car'?1.23:1.58)+(this.reduced?0:Math.sin(sim.totalTime*8)*Math.min(.006,player.speed*.0005)),chase?(this.kind==='bus'?14:8.2):this.kind==='bus'?-3.2:0);this.cockpit.visible=!chase;if(chase&&challenge?.fall){this.camera.position.set(0,4+Math.min(7,challenge.fall*3),3.5);this.camera.rotation.x=-.9;}
+ const yaw=steeredYaw(p.yaw,player.heading),moved=this.lastCameraPosition?Math.hypot(p.x-this.lastCameraPosition.x,p.z-this.lastCameraPosition.z):Infinity;
+ const resetView=menu||this.lastCameraChallenge!==challenge||moved>30;
+ this.viewYaw=smoothCameraYaw(this.viewYaw,yaw,dt,resetView);this.viewPitch=smoothCameraYaw(this.viewPitch,p.pitch||0,dt,resetView);this.lastCameraChallenge=challenge;this.lastCameraPosition={x:p.x,z:p.z};
+ this.rig.position.set(p.x,p.y,p.z);this.rig.rotation.set(this.viewPitch,this.viewYaw,0,'YXZ');
+ this.camera.rotation.set(pitch+(chase?-.16:0),look,0,'YXZ');this.camera.position.set(chase?0:this.kind==='bus'?-.54:this.kind==='car'?-.36:0,chase?(this.kind==='bus'?5.6:3.5):(this.kind==='bus'?2.45:this.kind==='car'?1.23:1.58),chase?(this.kind==='bus'?14:8.2):this.kind==='bus'?-3.2:0);this.cockpit.visible=!chase;if(chase&&challenge?.fall){this.camera.position.set(0,4+Math.min(7,challenge.fall*3),3.5);this.camera.rotation.x=-.9;}
  const own={s:player.s,offset:player.offset,color:4,paint:0xd3b557,braking:player.braking,world:{...p,yaw:steeredYaw(p.yaw,player.heading)}};this.playerCars.update(chase&&this.kind==='car'?[own]:[],this.route);this.playerBikes.update(chase&&this.kind==='bike'?[own]:[],this.route);this.playerBuses.update(chase&&this.kind==='bus'?[own]:[],this.route);
  this.wheel.rotation.z=-player.steering*(this.kind!=='bike'?.9:.15);
  this.sun.position.set(p.x-100,p.y+160,p.z-100);this.sun.target.position.set(p.x,p.y,p.z);this.sun.target.updateMatrixWorld();

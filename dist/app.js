@@ -2,11 +2,11 @@ import {safeRoadStart} from './quick-start.js?v=0.9.3';
 import {drawText,installGameText} from './game-text.js?v=0.8.2-puns';
 import {Route,clamp,lerp} from './geo.js?v=0.8.0';
 import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.3';
-import {DrivingWorld} from './world.js?v=0.9.3';
+import {DrivingWorld} from './world.js?v=0.9.5';
 import {rollDay,dayLabels,LocalChallenge} from './day.js?v=0.8.0';
 import {readGamepad,mergeControls} from './controls.js';
 import {WEATHER,earthquakeAt} from './environment.js';
-import {CommuteAudio} from './audio.js?v=0.9.4';
+import {CommuteAudio} from './audio.js?v=0.9.5';
 import {TouchDriveInput,bindTouchControls} from './touch-controls.js';
 
 installGameText(document.body);

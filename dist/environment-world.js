@@ -1,7 +1,7 @@
 import {drawText} from './game-text.js?v=0.8.2-puns';
 import * as THREE from './vendor/three.module.js';
 import {clamp,seeded} from './geo.js';
-import {WEATHER,earthquakeAt,geographicPoint} from './environment.js';
+import {WEATHER,geographicPoint} from './environment.js';
 
 export class EnvironmentWorld {
  constructor(world,terrain){
@@ -40,7 +40,5 @@ export class EnvironmentWorld {
   if(this.land)this.land.visible=!challenge;
   for(const {sprite} of this.labels){sprite.visible=!challenge&&mode==='sunny';const distance=sprite.position.distanceTo(this.w.camera.getWorldPosition(new THREE.Vector3()));sprite.scale.set(distance*.095,distance*.021,1);}
   if(this.w.wipers)for(let i=0;i<this.w.wipers.length;i++){const blade=this.w.wipers[i];blade.visible=weather.rain>0;blade.rotation.z=-.6+Math.sin(this.time*(weather.rain===2?8:4)+i*.1)*.65;}
-  const quake=challenge?0:earthquakeAt(sim.day,sim.totalTime);
-  if(!this.w.reduced){this.w.camera.position.x+=Math.sin(this.time*41)*quake*.11;this.w.camera.position.y+=Math.sin(this.time*33)*quake*.06;this.w.camera.rotation.z+=Math.sin(this.time*29)*quake*.018+(mode==='typhoon'?Math.sin(this.time*3)*.008:0);}
  }
 }
