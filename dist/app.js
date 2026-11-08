@@ -2,12 +2,12 @@ import {loadHsr,RailView} from './hsr.js?v=099';
 import {safeRoadStart} from './quick-start.js?v=0.9.3';
 import {loadBlenderAssets,loadBlenderChapter} from './blender-assets.js?v=0.9.7';
 import {BlenderRoads} from './blender-roads.js?v=0.9.8';
-import {BlenderScenery} from './blender-scenery.js?v=skywalk1';
-import {WorldArchive} from './world-archive.js?v=0.9.7';
+import {BlenderScenery} from './blender-scenery.js?v=hotel1';
+import {WorldArchive} from './world-archive.js?v=hotel1';
 import {drawText,installGameText} from './game-text.js?v=0.8.2-puns';
 import {Route,clamp,lerp} from './geo.js?v=0.9.8';
 import {TrafficSimulation,VEHICLES} from './sim.js?v=0.9.8.1';
-import {DrivingWorld} from './world.js?v=0.9.8.1';
+import {DrivingWorld} from './world.js?v=hotel1';
 import {rollDay,dayLabels,LocalChallenge} from './day.js?v=0.8.0';
 import {readGamepad,mergeControls} from './controls.js';
 import {WEATHER,earthquakeAt} from './environment.js';
@@ -170,7 +170,7 @@ function drawMap(){
  if(sim.court&&vehicle!=='bike')line(sim.court.points,'#d5b873',3);
  line(points,'#849d8b',5);line(points.filter(v=>v.s<=sim.player.s),'#d8d4a0',5);
  for(const car of sim.cars){if(car.speed>2)continue;const q=car.world||(car.kind==='bike'?world.bikeRoute:route).sample(car.s,car.offset),[x,y]=project(q);ctx.fillStyle=scenario==='incident'?'#e4aa71':'#d2b789';ctx.fillRect(x-1.7,y-1.7,3.4,3.4);}
- ctx.font='17px "PingFang TC",sans-serif';ctx.fillStyle='#d5e2d1';if(!mapNear)for(const m of data.landmarks.filter(m=>vehicle!=='bus'||m.s<=sim.tripEndS+10).filter((m,i,a)=>i===0||i===a.length-1||(m.s-a[i-1].s>850))){const[x,y]=project(route.sample(m.s));drawText(ctx,m.kind==='start'?(data.originLabel?.startsWith('二重埔')?'二重埔':'竹北'):m.kind==='finish'?(data.destinationLabel?.includes('聯發科')?'聯發科':'台積12A'):m.name,x+12,clamp(y+4,19,h-9));}
+ ctx.font='17px "PingFang TC",sans-serif';ctx.fillStyle='#d5e2d1';if(!mapNear)for(const m of data.landmarks.filter(m=>vehicle!=='bus'||m.s<=sim.tripEndS+10).filter((m,i,a)=>i===0||i===a.length-1||(m.s-a[i-1].s>850))){const[x,y]=project(route.sample(m.s));drawText(ctx,data.mapLabels?.[m.kind]??(m.kind==='start'?(data.originLabel?.startsWith('二重埔')?'二重埔':'竹北'):m.kind==='finish'?(data.destinationLabel?.includes('聯發科')?'聯發科':'台積12A'):m.name),x+12,clamp(y+4,19,h-9));}
  const[x,y]=project(p);ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(p.tz,p.tx)+Math.PI/2);ctx.fillStyle='#f3eed0';ctx.strokeStyle='#193438';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-11);ctx.lineTo(7,8);ctx.lineTo(0,4);ctx.lineTo(-7,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();ctx.font='15px sans-serif';ctx.fillStyle='#9ab7aa';drawText(ctx,'N ↑',w-45,22);
 }
 
@@ -242,23 +242,30 @@ async function loadRoute(id){
  if(mobilePerformance&&world){world.dispose();world=null;}
  const assets=await loadBlenderAssets(),nextRoute=new Route(next),initial=nextRoute.sample(entry.originKey==='zhubei'?760:280);let roads,scenery,rail;
  try{const archive=await WorldArchive.create(id);roads=await BlenderRoads.create(archive,nextRoute);scenery=await BlenderScenery.create(archive,roads.texture);[rail]=await Promise.all([entry.originKey==='erchong'?loadHsr():null,roads.ensureNear(initial.x,initial.z),scenery.ensureNear(initial.x,initial.z)]);}catch(e){scenery?.dispose();roads?.dispose();throw e;}if(token!==routeLoadToken){if(rail)scenery.destroy(rail);scenery.dispose();roads.dispose();return;}
- world?.dispose();data=next;routeId=id;route=nextRoute;sim=new TrafficSimulation(route,{vehicle,startS:entry.originKey==='zhubei'?760:280,warmupSteps:mobilePerformance?360:2400});world=new DrivingWorld($('scene'),route,sim.signals,terrainData,data.sceneryProfile==='south-hsinchu'?null:overpassData,assets,roads,scenery);if(rail){world.hsr=new RailView(rail,route,world.bikeRoute);world.scene.add(world.hsr.root);world.hsr.root.visible=false;}applyCarModel();world.makeCockpit(vehicle);
- $('originChoice').value=entry.originKey;$('destinationChoice').value=entry.destinationKey;
+ world?.dispose();data=next;routeId=id;route=nextRoute;sim=new TrafficSimulation(route,{vehicle,startS:entry.originKey==='zhubei'?760:280,warmupSteps:mobilePerformance?360:2400});world=new DrivingWorld($('scene'),route,sim.signals,terrainData,(data.sceneryProfile==='south-hsinchu'||data.opposingAlignment)?null:overpassData,assets,roads,scenery);if(rail){world.hsr=new RailView(rail,route,world.bikeRoute);world.scene.add(world.hsr.root);world.hsr.root.visible=false;}applyCarModel();world.makeCockpit(vehicle);
+ $('originChoice').value=entry.originKey;
+ const destinations=routeIndex.routes.filter(r=>r.originKey===entry.originKey && r.direction!=='return');
+ $('destinationChoice').replaceChildren(...destinations.map(r=>new Option(r.destinationLabel,r.destinationKey)));
+ $('destinationChoice').value=entry.destinationKey;
  $('directionRow').hidden=vehicle==='bus'||entry.originKey!=='guanxin';$('destinationChoice').closest('label').hidden=vehicle==='bus';$('tripDirection').value=entry.direction??'outbound';
  $('routeVehicleNote').hidden=entry.originKey!=='guanxin';$('routeVehicleNote').textContent=vehicleRouteNote();
  const options=[['0',data.sceneryProfile==='south-hsinchu'?(data.direction==='return'?'完整回程 · 經康橋、明湖路':'完整去程 · 經康橋再進園區'):'完整通勤 · 含隨機序章']];if(entry.originKey==='zhubei')options.push(['bridge','經國大橋 · 略過序章'],['city','慈雲路 · 略過序章'],['shops','Costco／迪卡儂 · 略過序章']);else if(entry.originKey==='erchong')options.push(['city','關東橋／光復路 · 略過序章']);options.push(['park','園區入口 · 略過序章'],['arrival','公司前 650 m · 略過序章']);
  if(data.quickStarts)options.splice(1,options.length-1,...data.quickStarts.filter(q=>vehicle!=='bus'||q.s<data.schoolStop.s).map(q=>[q.value,q.label]));if(entry.originKey==='guanxin'){options.splice(1,0,['guanxinPark','關新公園・遊戲場旁']);if(data.direction!=='return')options.splice(1,0,['yiji','壹集・關薪路社區旁'],['guanxinGuangfu','關新路・往光復路'],['jieshou','介壽路・園區入口牌樓']);}if(entry.originKey==='erchong')options.splice(1,0,['hsr','糕鐵過橋・東科路口前']);if(data.restaurants?.length)options.splice(1,0,['restaurant','麥當勞・得來速車龍旁']);if(vehicle==='bus')options[0][1]='完整交通車任務・關新路 → 糠橋';
+ if(entry.originKey==='decathlon')options[0][1]='完整通勤 · 迪卡儂到喜來登';
  if(entry.originKey==='zhubei')options.splice(1,0,['skywalk','慈雲路・商圈空橋前']);
  $('startPoint').replaceChildren(...options.map(([value,label])=>{const o=document.createElement('option');o.value=value;o.textContent=label;return o;}));
  const quickLink=new URLSearchParams(location.search).get('start');
- if(['hsr','skywalk'].includes(quickLink)&&options.some(([value])=>value===quickLink))$('startPoint').value=quickLink;
+ if(['hsr','skywalk','hotel'].includes(quickLink)&&options.some(([value])=>value===quickLink))$('startPoint').value=quickLink;
  $('routeSummary').textContent=vehicle==='bus'?'關新路 → 國道一號・國道三號 → 糠橋水滴廣場':entry.originKey==='guanxin'?(data.direction==='return'?data.originLabel+' → 康橋 → 明湖路 → 關新路':'關新路 → '+(vehicle==='bike'?'寶山平面道路':'國道一號・國道三號')+' → 康橋 → '+data.destinationLabel):data.routeSummary||entry.routeSummary||(entry.originKey==='zhubei'?'經國大橋 → 慈雲路':'中興路四段 → 光復路')+' → '+entry.destinationLabel;
  $('routeDescription').textContent=data.originLabel+' → '+data.landmarks.filter(x=>x.s>0&&x.s<data.lengthMeters-50).map(x=>x.name).join(' → ')+' → '+data.destinationLabel+'。汽車 '+(data.lengthMeters/1000).toFixed(2)+' km；機車 '+(data.bikeLengthMeters/1000).toFixed(2)+' km。';
  $('routeDestination').textContent=vehicle==='bus'?'駛入水滴廣場停靠兩秒，繞回柴喬路完成接送。':data.sceneryProfile==='south-hsinchu'?(data.direction==='return'?'經康橋校外接送點、明湖路回關新路。':'經康橋校外接送點後，前往'+data.destinationLabel+'。'):data.destination.address+'；終點位於廠區外的公共道路接入點，非警衛門實測。'+(entry.destinationKey==='tsmc'?'12廠選用12A／總部。':'');
+ if(entry.destinationKey==='sheraton')$('routeDestination').textContent=data.destination.address+'。沿自強南路北上，左轉光明六路東一段，抵達飯店前方公共道路。';
  $('start').disabled=false;$('start').firstElementChild.textContent='擲骰，發動今天';ready=true;last=performance.now();
 }
 function selectedRoute(){
- const origin=$('originChoice').value,dest=$('destinationChoice').value;
+ const origin=$('originChoice').value;
+ const available=routeIndex.routes.filter(r=>r.originKey===origin && r.direction!=='return');
+ const dest=available.find(r=>r.destinationKey===$('destinationChoice').value)?.destinationKey ?? available[0].destinationKey;
  return origin==='guanxin'&&$('tripDirection').value==='return'?dest+'-guanxin':origin+'-'+dest;
 }
 for(const id of ['originChoice','destinationChoice','tripDirection'])$(id).addEventListener('change',()=>loadRoute(selectedRoute()).catch(showError));
@@ -266,4 +273,4 @@ $('returnTrip').addEventListener('click',async()=>{
  const dest=$('destinationChoice').value;toMenu();
  try{await loadRoute(dest+'-guanxin');$('startPoint').value='0';}catch(e){showError(e);}
 });
-try{[routeIndex,terrainData,overpassData]=await Promise.all([fetch('data/routes/index.json?v=0.8.1').then(r=>r.json()),fetch('data/terrain.json').then(r=>r.json()),fetch('data/overpasses.json?v=0.8.0').then(r=>r.json())]);const requested=new URL(location.href).searchParams.get('route');await loadRoute(routeIndex.routes.some(r=>r.id===requested)?requested:routeIndex.defaultRouteId);requestAnimationFrame(frame);}catch(e){showError(e);}
+try{[routeIndex,terrainData,overpassData]=await Promise.all([fetch('data/routes/index.json?v=hotel1').then(r=>r.json()),fetch('data/terrain.json').then(r=>r.json()),fetch('data/overpasses.json?v=0.8.0').then(r=>r.json())]);const requested=new URL(location.href).searchParams.get('route');await loadRoute(routeIndex.routes.some(r=>r.id===requested)?requested:routeIndex.defaultRouteId);requestAnimationFrame(frame);}catch(e){showError(e);}

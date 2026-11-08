@@ -1,7 +1,7 @@
 const ID=/^(zhubei|erchong|guanxin|tsmc|mediatek)-(tsmc|mediatek|guanxin)$/;
 export class WorldArchive{
  static async create(id){
-  if(!ID.test(id))throw Error('無效路線');const base='assets/world/'+id;
+  if(!ID.test(id)&&id!=='decathlon-sheraton')throw Error('無效路線');const base='assets/world/'+id;
   const response=await fetch(base+'.json?v=0.9.7');if(!response.ok)throw Error('場景索引讀取失敗');const data=await response.json();
   if(data.version!==1||data.id!==id||!Number.isSafeInteger(data.byteLength)||data.byteLength<1||data.byteLength>30000000||!Array.isArray(data.roads?.tiles)||!Array.isArray(data.scenery?.tiles))throw Error('場景索引不正確');
   const archive=new WorldArchive(base+'.bin?v=0.9.7',data),probe=await fetch(archive.url,{headers:{Range:'bytes=0-0'}});if(!probe.ok)throw Error('場景資源讀取失敗');

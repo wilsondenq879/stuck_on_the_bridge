@@ -5,10 +5,10 @@ const {DrivingWorld}=await import(repo+'/dist/world.js');const {bikeBranches}=aw
 const read=p=>JSON.parse(fs.readFileSync(path.join(repo,'dist/data',p)));
 const index=read('routes/index.json'),overpasses=read('overpasses.json');
 const target=path.resolve('road-intermediate');fs.mkdirSync(target,{recursive:true});
-for(const item of index.routes){
+for(const item of index.routes.filter(r=>!process.argv[2]||process.argv[2]===r.id)){
  const data=read('routes/'+item.file),w=Object.create(DrivingWorld.prototype);w.route=new Route(data);
  w.bikeRoute=new Route({...data,points:data.bikePoints,lengthMeters:data.bikeLengthMeters});w.branches=bikeBranches(w.route,w.bikeRoute);
- w.interchange=data.sceneryProfile==='south-hsinchu'?null:overpasses;w.scene=new THREE.Scene();w.rng=seeded(12);
+ w.interchange=(data.sceneryProfile==='south-hsinchu'||data.opposingAlignment)?null:overpasses;w.scene=new THREE.Scene();w.rng=seeded(12);
  const colors={road:0x465051,side:0x979f93,median:0xc4c4ae,paint:0xe1e0cb,yellow:0xdbb755,metal:0x737d76,leaf:0x62785b,trunk:0x77705c};
  w.mats=Object.fromEntries(Object.entries(colors).map(([k,v])=>[k,new THREE.MeshStandardMaterial({name:k,color:v})]));
  w.prepareRoadClearance();w.makeRoad();w.scene.updateMatrixWorld(true);

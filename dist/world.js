@@ -90,11 +90,11 @@ export class DrivingWorld {
  }
  prepareRoadClearance(){
    this.interchange=alignInterchange(this.interchange,this.route.data.routePrefixMeters||0);
-   this.northbound=isErchong(this.route)?null:this.interchange?.northboundAlignment?.points;
+   this.northbound=this.route.data.opposingAlignment ?? (isErchong(this.route)?null:this.interchange?.northboundAlignment?.points);
    const viaduct=this.interchange?.parkViaduct;
    this.crossingViaduct=isErchong(this.route)&&viaduct ? new Route(viaduct) : null;
    const local=[];
-   if(this.route.data.direction!=='return')for(const shop of this.route.data.restaurants||[])for(const p of shop.northboundRoad){
+   if(!this.route.data.opposingAlignment && this.route.data.direction!=='return')for(const shop of this.route.data.restaurants||[])for(const p of shop.northboundRoad){
      const n=this.route.nearest(p.x,p.z);if(n.d<35&&n.s>.1&&n.s<this.route.length-.1)local.push({x:p.x,z:p.z,y:0,southboundS:n.s,lanes:shop.id==='ziqiang'?3:2,width:(shop.id==='ziqiang'?3:2)*3.35});
    }
    this.restaurantOpposing=local.sort((a,b)=>a.southboundS-b.southboundS);
@@ -125,7 +125,7 @@ export class DrivingWorld {
  for(const water of(this.route.data.waterAreas||[])){const points=water.points||water;if(!Array.isArray(points)||points.length<3)continue;const shape=new THREE.Shape();points.forEach((p,i)=>i?shape.lineTo(p.x,-p.z):shape.moveTo(p.x,-p.z));const m=mesh(new THREE.ShapeGeometry(shape),new THREE.MeshStandardMaterial({color:0x739c9f,roughness:.26,metalness:.25,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.y=.025;this.scene.add(m);}
  const built=new Set([...interchangeRoads(this.interchange),...(this.route.data.segments??[]),...(this.route.data.bikeSegments??[])].map(r=>r.osmWayId));
  for(const id of this.crossingViaduct?.data.sourceWayIds??[])built.add(id);
- if(this.northbound)for(const id of this.interchange.renderOwnership?.skipDuplicateContextWayIds??[])built.add(id);
+ if(this.northbound)for(const id of this.interchange?.renderOwnership?.skipDuplicateContextWayIds??[])built.add(id);
  for(const road of(this.route.data.surroundingRoads||[])){if(this.route.data.sceneryProfile==='south-hsinchu'&&road.highway==='motorway'&&!road.bridge){this.roadLine(road.points,3.35*(Number(road.lanes)||3),this.mats.road,-.05);continue;}if(built.has(road.osmWayId)||road.bridge||(road.distance<7&&!road.name?.includes('機車')))continue;const w=road.highway?.includes('trunk')?12:['secondary','primary'].includes(road.highway)?9:5.5;this.roadLine(road.points,w,this.mats.road,-.05);}
  // A distant skyline gives depth while the street footprints stay tied to OSM.
  }

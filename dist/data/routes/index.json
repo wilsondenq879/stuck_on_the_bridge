@@ -297,6 +297,34 @@
         "gateVerified": false
       },
       "file": "mediatek-guanxin.json"
+    },
+    {
+      "id": "decathlon-sheraton",
+      "file": "decathlon-sheraton.json",
+      "originKey": "decathlon",
+      "destinationKey": "sheraton",
+      "originLabel": "慈雲路・迪卡儂",
+      "destinationLabel": "竹北喜來登",
+      "lengthMeters": 3742.73,
+      "bikeLengthMeters": 3742.73,
+      "destination": {
+        "name": "竹北喜來登大飯店",
+        "address": "新竹縣竹北市光明六路東一段265號",
+        "sourceUrl": "https://www.sheraton-hsinchu.com/zh-tw/websev?cat=contact",
+        "osmBuildingId": 367537863,
+        "osmNodeId": 3724484447,
+        "lat": 24.8202755,
+        "lon": 121.0275333,
+        "entranceRoad": "光明六路東一段",
+        "note": "終點在飯店前方公共道路。"
+      },
+      "departure": {
+        "name": "慈雲路・迪卡儂",
+        "osmNodeId": 8667810956,
+        "lat": 24.7915871,
+        "lon": 121.0122425,
+        "sourceUrl": "https://www.openstreetmap.org/way/582786459"
+      }
     }
   ],
   "notes": [

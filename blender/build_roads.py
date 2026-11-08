@@ -2,7 +2,7 @@ import bpy, json, pathlib, sys, base64
 import numpy as np
 args=sys.argv[sys.argv.index('--')+1:]; source, output = map(pathlib.Path,args[:2]);data=json.loads(source.read_text());output.mkdir(parents=True,exist_ok=True)
 assert set(data)=={'id','tileSize','tiles'} and data['tileSize']==500
-assert data['id'] in {'zhubei-tsmc','zhubei-mediatek','erchong-tsmc','erchong-mediatek','guanxin-tsmc','guanxin-mediatek','tsmc-guanxin','mediatek-guanxin'}
+assert data['id'] in {'zhubei-tsmc','zhubei-mediatek','erchong-tsmc','erchong-mediatek','guanxin-tsmc','guanxin-mediatek','tsmc-guanxin','mediatek-guanxin','decathlon-sheraton'}
 colors={'road':(0.061,0.08,0.082,1),'side':(0.31,0.35,0.30,1),'median':(0.55,0.55,0.42,1),'paint':(.76,.75,.59,1),'yellow':(.70,.46,.12,1),'metal':(.17,.21,.18,1),'leaf':(.12,.19,.11,1),'trunk':(.18,.16,.12,1)}
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 mats={}

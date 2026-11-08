@@ -1,4 +1,4 @@
-import {StreetDistricts} from './street-districts.js?v=skywalk1';
+import {StreetDistricts} from './street-districts.js?v=hotel1';
 import {liftHill} from './corridor-tiles.js';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';

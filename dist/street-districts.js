@@ -1,5 +1,6 @@
 // World-space bounds in the common OSM projection, including both approaches.
 const districts=[
+ ['hotel-frontage',158,273,-457,-359],
  ['retail-skywalks',-1442,-1306,2679,2969],
  ['city',-930,-455,3200,3840],['park',-1730,-268,3880,5280],
  ['campus',-6130,-5920,5280,5520],['hill',-7550,-5670,4870,6060]
